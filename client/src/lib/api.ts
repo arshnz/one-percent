@@ -1,7 +1,8 @@
 import type { User, Workstation, Habit, HabitToday, HabitLog, CreateHabitInput, Goldilocks, Momentum, CanvasNode, CanvasNodeType, StickyColor, AutomaticityState, AutomaticityResult, Phase, HabitBlueprint, CanvasSynthesis, CoachConversationSummary, CoachConversation, Goal, GoalDomain, GoalStatus, Assessment, CompassExtract, CheckIn, CheckInCurrent, SetbackPlan, CompassDraft, CompassSnapshot, CompassSnapshotSummary } from '@/types'
 import { auth as firebaseAuth } from './firebase'
+import { API_BASE } from './config'
 
-const BASE = '/api'
+const BASE = `${API_BASE}/api`
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {

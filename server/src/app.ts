@@ -20,10 +20,27 @@ const app = express()
 
 app.set('trust proxy', 1)
 
+// The web client is same-origin (Hosting rewrites /api/** to this function), so
+// browsers send no Origin header for it and this middleware is inert there —
+// that path is unaffected by anything listed below.
+//
+// The iOS app is not same-origin: its bundle is served from capacitor://localhost
+// and calls the absolute hosting URL, so it needs an explicit allowlist entry.
+// (A truly native, non-webview client sends no Origin at all and is likewise
+// unaffected.) Keep this a STATIC ARRAY — a function origin that throws becomes
+// a 500 on every request, including the web app's.
+const ALLOWED_ORIGINS = [
+  // iOS / Capacitor webview schemes
+  'capacitor://localhost',
+  'ionic://localhost',
+  'https://localhost',
+  // local web dev
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+]
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? false
-    : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: ALLOWED_ORIGINS,
   credentials: true,
 }))
 

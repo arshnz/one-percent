@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { MessagesSquare, Sparkles } from 'lucide-react'
 import { auth as firebaseAuth } from '@/lib/firebase'
+import { API_BASE } from '@/lib/config'
 import type { HabitBlueprint, HabitKind } from '@/types'
 import { GuidedChat, type ChatMessage } from '@/components/ai/GuidedChat'
 
@@ -39,7 +40,7 @@ export function BlueprintInterview({
   const draft = useMutation({
     mutationFn: async () => {
       const token = firebaseAuth.currentUser ? await firebaseAuth.currentUser.getIdToken() : null
-      const res = await fetch('/api/ai/blueprint-draft', {
+      const res = await fetch(`${API_BASE}/api/ai/blueprint-draft`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ messages, kind }),
