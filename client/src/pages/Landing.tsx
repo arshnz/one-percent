@@ -35,6 +35,12 @@ export function LandingPage() {
         No streaks. No guilt. Just identity votes, a permanent fail-safe, and a
         system that never lets you miss twice.
       </p>
+      <Link
+        to="/privacy"
+        className="mt-8 text-xs text-text-3 underline decoration-text-3/40 underline-offset-4 transition-colors hover:text-text-1"
+      >
+        Privacy
+      </Link>
     </div>
   )
 }

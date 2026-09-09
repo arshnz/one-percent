@@ -128,7 +128,7 @@ export async function runReminders(prisma: PrismaClient, now: Date, opts: RunOpt
         const result = await sendPush(sub, {
           title: pushTitle,
           body: pushBody,
-          url: '/app/today',
+          url: '/app',
         })
         if (result === 'gone') {
           await prisma.pushSubscription.delete({ where: { endpoint: sub.endpoint } }).catch(() => {})

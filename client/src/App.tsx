@@ -10,6 +10,7 @@ import { auth as firebaseAuth } from '@/lib/firebase'
 import { auth as authApi, workstations as wsApi } from '@/lib/api'
 import { LandingPage } from '@/pages/Landing'
 import { AuthPage } from '@/pages/Auth'
+import { PrivacyPage } from '@/pages/Privacy'
 import { LaunchpadPage } from '@/pages/Launchpad'
 import { MomentumPage } from '@/pages/Momentum'
 
@@ -116,6 +117,9 @@ function AuthGuard() {
 const router = createBrowserRouter([
   { path: '/', element: <LandingPage /> },
   { path: '/auth', element: <AuthPage /> },
+  // Public and unauthenticated — App Store Connect requires a reachable
+  // privacy policy URL, and reviewers open it.
+  { path: '/privacy', element: <PrivacyPage /> },
   {
     path: '/app',
     element: <AuthGuard />,
@@ -140,6 +144,10 @@ const router = createBrowserRouter([
           { path: 'checkin', element: <CheckInPage /> },
           // Ledger was renamed to Momentum — keep old bookmarks working.
           { path: 'ledger', element: <Navigate to="/app/momentum" replace /> },
+          // /app/today never existed as a route, but reminder emails, the PWA
+          // manifest and push payloads all pointed here for months — those are
+          // already out in the world and can't be recalled. Land them properly.
+          { path: 'today', element: <Navigate to="/app" replace /> },
           { path: 'theory', element: <TheoryPage /> },
           { path: 'canvas', element: <VisionCanvasPage /> },
           { path: 'settings', element: <SettingsPage /> },

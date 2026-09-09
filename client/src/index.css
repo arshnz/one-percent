@@ -1,3 +1,9 @@
+/* Self-hosted fonts. Previously loaded from fonts.googleapis.com, which meant a
+   render-blocking third-party request on every cold load — and, in the bundled
+   iOS app, falling back to system faces whenever the network is slow or absent.
+   Latin + latin-ext only (latin-ext carries the te reo macrons: ā ē ī ō ū). */
+@import './fonts.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

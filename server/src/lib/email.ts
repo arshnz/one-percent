@@ -71,7 +71,7 @@ export async function sendReminderEmail(to: string, habit: ReminderHabit): Promi
       <p style="font-size:15px;line-height:1.6;color:#6F6B62;margin:0 0 20px">
         Cast today's vote for who you're becoming — even the 2-minute version counts.
       </p>
-      <a href="https://one-percent-cb465.web.app/app/today"
+      <a href="https://one-percent-cb465.web.app/app"
          style="display:inline-block;background:#1B1A17;color:#fff;text-decoration:none;font-size:14px;font-weight:500;padding:11px 20px;border-radius:10px">
         Cast your vote
       </a>
@@ -105,7 +105,7 @@ export async function sendDigestEmail(to: string, items: DigestItem[]): Promise<
     '',
     ...textLines,
     '',
-    `Cast each vote at https://one-percent-cb465.web.app/app/today`,
+    `Cast each vote at https://one-percent-cb465.web.app/app`,
     '',
     `— One Percent`,
   ].join('\n')
@@ -124,7 +124,7 @@ export async function sendDigestEmail(to: string, items: DigestItem[]): Promise<
       <h2 style="font-size:21px;font-weight:500;margin:0 0 6px">Good morning.</h2>
       <p style="font-size:15px;line-height:1.6;color:#6F6B62;margin:0 0 16px">Here's who you're voting for today.</p>
       ${rows}
-      <a href="https://one-percent-cb465.web.app/app/today"
+      <a href="https://one-percent-cb465.web.app/app"
          style="display:inline-block;margin-top:20px;background:#1B1A17;color:#fff;text-decoration:none;font-size:14px;font-weight:500;padding:11px 20px;border-radius:10px">
         Open today's votes
       </a>

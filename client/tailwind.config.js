@@ -20,12 +20,13 @@ export default {
         amber: 'rgb(var(--color-amber) / <alpha-value>)',
       },
       fontFamily: {
+        // Only these four are self-hosted (client/src/fonts.css). The old
+        // `space-grotesk`, `plex` and Space Mono entries were never used
+        // anywhere in src/ and were loading three families for nothing.
         sans: ['"Hanken Grotesk"', 'system-ui', 'sans-serif'],
         serif: ['"Newsreader"', 'Georgia', 'serif'],
         display: ['"Bricolage Grotesque"', 'system-ui', 'sans-serif'],
-        'space-grotesk': ['"Space Grotesk"', 'system-ui', 'sans-serif'],
-        plex: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
-        mono: ['"IBM Plex Mono"', '"Space Mono"', 'monospace'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
         card: '0 1px 2px rgba(29,29,27,0.05), 0 18px 48px -24px rgba(29,29,27,0.18)',

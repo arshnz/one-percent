@@ -2,7 +2,7 @@
   "name": "One Percent",
   "short_name": "One Percent",
   "description": "Cast a vote for who you want to be — one tiny rep at a time.",
-  "start_url": "/app/today",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "background_color": "#E9E7E2",
