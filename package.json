@@ -1,0 +1,17 @@
+{
+  "name": "one-percent",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["server", "client"],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=server\" \"npm run dev --workspace=client\"",
+    "dev:emu": "FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 VITE_FIREBASE_AUTH_EMULATOR=http://127.0.0.1:9099 npm run dev",
+    "build": "npm run build --workspace=server && npm run build --workspace=client",
+    "setup": "npm install && npm run db:migrate --workspace=server",
+    "db:migrate": "npm run db:migrate --workspace=server",
+    "db:studio": "npm run db:studio --workspace=server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

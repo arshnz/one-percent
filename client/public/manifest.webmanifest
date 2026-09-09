@@ -1,0 +1,16 @@
+{
+  "name": "One Percent",
+  "short_name": "One Percent",
+  "description": "Cast a vote for who you want to be — one tiny rep at a time.",
+  "start_url": "/app/today",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#E9E7E2",
+  "theme_color": "#eeeeec",
+  "lang": "en",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

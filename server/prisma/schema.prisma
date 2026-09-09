@@ -1,0 +1,387 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../generated/prisma"
+  binaryTargets   = ["native", "debian-openssl-3.0.x"]
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  // All One Percent tables live in a dedicated "habit" schema so they
+  // never collide with the ToDo app sharing the same Postgres instance.
+  schemas   = ["habit"]
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  password     String        @default("")
+  name         String?
+  timezone        String        @default("Pacific/Auckland")
+  personalContext String?
+  // Reminder channel opt-ins (the nudge engine fans out to whichever are on).
+  emailReminders  Boolean       @default(true)
+  pushReminders   Boolean       @default(true)
+  // Local YYYY-MM-DD of the last 6am "today's intentions" digest sent — dedup.
+  lastDigestOn    String?
+  // Structured snapshot from the Compass assessment (ABZ stage A): contentment,
+  // priorities, high-quality hours, past sticky habits, obstacles. JSON.
+  assessment      String?
+  // Local YYYY-MM-DD of the last weekly check-in nudge sent — dedup guard.
+  lastCheckinNudgeOn String?
+  // Ia Rā's 7pm nudge. A different app entirely — it just borrows this server's
+  // scheduler and Gmail transport, because Ia Rā shares a Firebase project with
+  // a parked app and a functions deploy there can prune the other's `api`.
+  lastIaRaNudgeOn    String?
+  createdAt       DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  workstations Workstation[]
+  pushSubscriptions PushSubscription[]
+
+  @@schema("habit")
+}
+
+// A single browser/device's Web Push endpoint (VAPID). One user can have many
+// (phone PWA, desktop Chrome, …). Pruned when the endpoint returns 404/410.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@schema("habit")
+}
+
+// Single container per user (auto-created on first sign-in). Kept to mirror the
+// ToDo app's auth/route/ownership plumbing; a habit user has exactly one.
+model Workstation {
+  id          String       @id @default(cuid())
+  userId      String
+  name        String       @default("My Habits")
+  createdAt   DateTime     @default(now())
+  deletedAt   DateTime?
+  // The autosaved Compass worksheet in progress (A/Z/B answers + goals). One
+  // working draft per container; frozen copies live in CompassSnapshot.
+  compassDraft Json?
+  // Cached Momentum insights — JSON string[] regenerated after each check-in
+  // save, so the Momentum page reads instantly without an AI call.
+  momentumInsights   String?
+  momentumInsightsAt DateTime?
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habits      Habit[]
+  canvasNodes CanvasNode[]
+  coachChats  CoachConversation[]
+  goals       Goal[]
+  checkIns    CheckIn[]
+  compassSnapshots CompassSnapshot[]
+
+  @@unique([userId, name])
+  @@schema("habit")
+}
+
+// A frozen, point-in-time capture of the whole Compass worksheet (ABZ). Purely
+// historical, read-only saved versions — the live document is the workstation's
+// compassDraft, which syncs its goals + assessment into the app on every save.
+model CompassSnapshot {
+  id            String      @id @default(cuid())
+  workstationId String
+  label         String?
+  // Stage-A current-reality answers (CompassAssessmentForm shape).
+  assessment    Json
+  // Stage-Z where-you-want-to-end-up answers (CompassVision shape).
+  vision        Json
+  // The concrete goals list (title/domain/whyText/timeframe + optional systems).
+  goals         Json
+  createdAt     DateTime    @default(now())
+  workstation   Workstation @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+
+  @@index([workstationId])
+  @@schema("habit")
+}
+
+// A saved Habit Coach conversation — lets the user keep separate threads about
+// different topics, each persisted with its full message history.
+model CoachConversation {
+  id            String         @id @default(cuid())
+  workstationId String
+  title         String         @default("New chat")
+  createdAt     DateTime       @default(now())
+  // Bumped on every new message so the chat list can sort by recency.
+  lastMessageAt DateTime       @default(now())
+  workstation   Workstation    @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+  messages      CoachMessage[]
+
+  @@index([workstationId])
+  @@schema("habit")
+}
+
+model CoachMessage {
+  id             String            @id @default(cuid())
+  conversationId String
+  // 'user' | 'model'
+  role           String
+  text           String
+  createdAt      DateTime          @default(now())
+  conversation   CoachConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@schema("habit")
+}
+
+// RAG store for the Habit Coach — the book "Atomic Habits" chunked + embedded.
+// The `embedding` column is a pgvector type Prisma can't represent natively, so
+// it's `Unsupported`: queried via raw SQL (see server/src/routes/ai.ts) and
+// (re)built by server/src/scripts/ingestBook.ts. Declared here only so that
+// `prisma db push` knows the table exists and never drops it.
+model BookChunk {
+  id        Int                         @id @default(autoincrement())
+  idx       Int
+  content   String
+  embedding Unsupported("vector(3072)")
+
+  @@schema("habit")
+}
+
+// The Vision Canvas — a free-flowing spatial board of emotional motivation.
+model CanvasNode {
+  id            String      @id @default(cuid())
+  workstationId String
+  // type: text | quote | note | image
+  type          String      @default("note")
+  content       String      @default("")
+  // image URL when type=image
+  imageUrl      String?
+  x             Float       @default(0)
+  y             Float       @default(0)
+  width         Float       @default(220)
+  // sticky colour key: yellow | blue | green | pink | plain
+  color         String      @default("yellow")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  workstation   Workstation @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+
+  @@schema("habit")
+}
+
+// A weekly reflection — the workbook's CHECK-IN pages. One per week, upserted.
+// The app remembers what the user said (aiSummary feeds the coaches).
+model CheckIn {
+  id            String      @id @default(cuid())
+  workstationId String
+  // Local YYYY-MM-DD of the Monday the week under review started on.
+  weekOf        String
+  // "How are things going?" — 1–10.
+  rating        Int?
+  tinyVictory   String?
+  workingWell   String?
+  notWorking    String?
+  // JSON array of {obstacle, plan} — carries into next week's setback framing.
+  obstacles     String      @default("[]")
+  freeform      String?
+  // 2-sentence AI distillation, layered into coach context so the app remembers.
+  aiSummary     String?
+  // 'completed' | 'skipped' — a skipped week records the dismissal so the card
+  // stays hidden and history can show it honestly.
+  status        String      @default("completed")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  workstation   Workstation @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+
+  @@unique([workstationId, weekOf])
+  @@schema("habit")
+}
+
+// A "Z" in the workbook's ABZ framework — where the user wants to end up.
+// Habits link here so every daily vote visibly serves a bigger goal.
+model Goal {
+  id            String      @id @default(cuid())
+  workstationId String
+  // "Run a half marathon by 2027", "Be present with my kids in the evenings"
+  title         String
+  // Life domain: health | career | relationships | money | mind
+  domain        String      @default("health")
+  whyText       String?
+  // Free-text horizon, e.g. "by mid 2027"
+  timeframe     String?
+  // Provenance — e.g. canvas synthesis JSON or compass transcript extract.
+  sourceNote    String?
+  // Stable id of the originating source item (e.g. a Compass worksheet goal),
+  // so reconciliation survives title edits instead of matching on the title.
+  sourceId      String?
+  // active | achieved | shelved
+  status        String      @default("active")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  workstation   Workstation @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+  habits        Habit[]
+
+  @@index([workstationId])
+  @@schema("habit")
+}
+
+model Habit {
+  id            String      @id @default(cuid())
+  workstationId String
+  // The goal this habit is the next step toward (ABZ: this habit is B).
+  goalId        String?
+  // 'build' (default — the original 4-laws flow) | 'break' (inverted 4 laws).
+  // Break habits reuse most of this model with relabelled meaning; see below.
+  kind          String      @default("build")
+  // Break only: 'abstain' (daily clean-day vote) | 'taper' (daily count under a
+  // shrinking per-phase limit). Null for build habits.
+  breakMode     String?
+  // Break only — "Make it invisible": the cue/trigger to remove or design around.
+  avoidTrigger      String?
+  // Break only — "Make it easy (for the replacement)": what to do INSTEAD when
+  // the urge hits. Distinct from failSafeAction (the 2-minute resist gateway).
+  replacementAction String?
+  // Break only — "Make it difficult": the friction step / commitment device.
+  frictionDevice    String?
+  // How the daily check-in is presented: 'hold' (hold-to-vote button) | 'yesno'
+  // (a yes-or-no question card, e.g. "Did I sleep 8 hours last night?").
+  // Taper break habits always use their count control and ignore this.
+  checkStyle    String      @default("hold")
+  // Optional wording for the yesno question; falls back to the phase target.
+  checkQuestion String?
+  // Identity-oriented name, e.g. "I am someone who moves every day"
+  title         String
+  // The emotional "why" — text and/or an image asset shown on every card
+  whyText       String?
+  whyImageUrl   String?
+  // Implementation intention pieces (Atomic Habits template):
+  // "After I [anchorRoutine], I will immediately [failSafeAction]."
+  // Optional because the cue may instead be time- or location-based (see cueType).
+  anchorRoutine String?
+  // Cue category: habit_stack | time | location. Forces a concrete trigger.
+  cueType       String      @default("habit_stack")
+  // Concrete cue specifics, used per cueType (HH:MM for time, free text for place).
+  cueTime       String?
+  cueLocation   String?
+  // Permanent 2-minute gateway — the microscopic version that NEVER scales up.
+  failSafeAction String
+  // Self-chosen immediate reward (Fogg) — fires the reinforcement loop on each rep.
+  celebration   String?
+  // Temptation bundle (Premack / "make it attractive") — a want paired WITH the
+  // habit, e.g. "only listen to my podcast while on the treadmill". Distinct from
+  // celebration: it pulls you IN before/during, rather than rewarding after.
+  temptationBundle String?
+  // How the schedule is expressed:
+  //   'days'   — fixed weekdays, read from scheduleDays (the original behaviour)
+  //   'weekly' — a quota of timesPerWeek reps on ANY days, Mon–Sun
+  // See server/src/lib/schedule.ts — the only place either field is interpreted.
+  scheduleType  String      @default("days")
+  // JSON array of weekday numbers (0=Sun..6=Sat) the habit is scheduled for.
+  // Authoritative for scheduleType 'days'; kept but unused for 'weekly'.
+  scheduleDays  String      @default("[0,1,2,3,4,5,6]")
+  // Weekly quota (1–6) for scheduleType 'weekly'. Null for 'days'. 7× a week is
+  // just every day, so it belongs in 'days' mode rather than here.
+  timesPerWeek  Int?
+  // Reminder time (HH:MM local) — the moment-of-choice nudge. Independent of
+  // cueType so habit-stack/location habits can still be reminded.
+  reminderTime    String?
+  reminderEnabled Boolean    @default(true)
+  // Local YYYY-MM-DD of the last reminder sent — dedup guard (one nudge/day).
+  lastRemindedOn  String?
+  // Environment-priming rule surfaced by the future Nightstand Check.
+  nightstandRule String?
+  // JSON array of {obstacle, plan} pairs — the workbook's "Potential Obstacles /
+  // Plans to Overcome Them". Surfaced on never-miss-twice danger days.
+  setbackPlans  String      @default("[]")
+  // The workbook Quick-Start worksheet's "focusing on a system, not a goal"
+  // confirmation. Soft — a nudge the user acknowledged, never a save gate.
+  systemFocusConfirmed Boolean @default(false)
+  // Free-text per worksheet section so the user can improvise beyond the
+  // structured blocks. JSON {cue,craving,response,reward,setbacks} of strings.
+  sectionNotes  String      @default("{}")
+  // Temporary rest — set when the user pauses "it's too much right now". Paused
+  // habits drop off Today, stop reminders/digest, and don't decay rhythm. Cleared
+  // on resume. Distinct from archivedAt (permanent retirement).
+  pausedAt      DateTime?
+  archivedAt    DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  workstation   Workstation @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+  goal          Goal?       @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  phases        Phase[]
+  logs          HabitLog[]
+  checks        AutomaticityCheck[]
+
+  @@schema("habit")
+}
+
+model Phase {
+  id          String     @id @default(cuid())
+  habitId     String
+  phaseNumber Int
+  // The actual daily target for this phase, e.g. "Walk 15 mins on treadmill".
+  targetText  String
+  // The unambiguous finish line — when exactly a rep counts as done. Removes
+  // self-negotiation ("both shoes on and standing outside", not "go for a walk").
+  definitionOfDone String?
+  // Completed reps required to graduate this phase (e.g. 30).
+  targetCount Int        @default(30)
+  // Taper break habits only: the max occurrences allowed per day at this phase
+  // (e.g. 2 → 1 → 0). A day at or under the limit counts as a vote. Null for
+  // build/abstain phases.
+  dailyLimit  Int?
+  // status: active | locked | ready | graduated
+  // ready = rep floor (targetCount) reached; awaiting the Automaticity Check
+  status      String     @default("active")
+  graduatedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  habit       Habit      @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  logs        HabitLog[]
+  checks      AutomaticityCheck[]
+
+  @@unique([habitId, phaseNumber])
+  @@schema("habit")
+}
+
+// A 4-item SRBAI (Self-Report Behavioural Automaticity Index) submission.
+// Replaces raw rep-count graduation: passing one graduates the phase.
+model AutomaticityCheck {
+  id        String   @id @default(cuid())
+  habitId   String
+  phaseId   String
+  scores    String   // JSON array of 4 ints (1–5 agreement)
+  mean      Float
+  passed    Boolean
+  createdAt DateTime @default(now())
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  phase     Phase    @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+
+  @@schema("habit")
+}
+
+model HabitLog {
+  id        String   @id @default(cuid())
+  habitId   String
+  phaseId   String?
+  // YYYY-MM-DD in the user's local time.
+  date      String
+  // status: target | failsafe | miss. target/failsafe each count as an Identity Vote.
+  status    String
+  // Taper break habits only: how many times the bad habit happened today. The
+  // status is derived from this vs the phase's dailyLimit. Null otherwise.
+  quantity  Int?
+  // Goldilocks reflection: too_easy | just_right | too_hard
+  goldilocks String?
+  // "What got in the way?" on missed days — JSON array of short chip strings
+  // (e.g. ["Tired","No time"]) plus an optional free-text note. Kept separate
+  // so chip counts aggregate with a trivial parse.
+  missReasons String  @default("[]")
+  missNote    String?
+  createdAt DateTime @default(now())
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  phase     Phase?   @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+
+  @@unique([habitId, date])
+  @@schema("habit")
+}
