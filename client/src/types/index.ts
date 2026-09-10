@@ -497,3 +497,73 @@ export interface HabitBlueprint {
   frictionDevice?: string
   phases: { targetText: string; definitionOfDone: string; targetCount: number; dailyLimit?: number }[]
 }
+
+// ── Wearables ────────────────────────────────────────────────────────────────
+// One recorded day from a wearable (Garmin today). Every field is nullable and
+// days can be missing entirely: the watch comes off, and a chart that quietly
+// interpolates over a gap is lying about what was measured.
+export interface WearableDay {
+  date: string
+  sleepMinutes: number | null
+  deepMinutes: number | null
+  remMinutes: number | null
+  sleepScore: number | null
+  restingHr: number | null
+  hrvNight: number | null
+  bodyBatteryHigh: number | null
+  bodyBatteryLow: number | null
+  stressAvg: number | null
+  respirationAvg: number | null
+  steps: number | null
+  activeMinutes: number | null
+}
+
+// The metrics a habit can be measured against. Mirrors WEARABLE_METRICS in
+// server/src/lib/wearableMetrics.ts.
+export type WearableMetric =
+  | 'restingHr'
+  | 'sleepMinutes'
+  | 'hrvNight'
+  | 'bodyBatteryHigh'
+  | 'stressAvg'
+
+export interface WearableStatus {
+  connected: boolean
+  totalDays: number
+  firstDate: string | null
+  lastSyncedAt: string | null
+  lastDate: string | null
+  status: 'ok' | 'error' | null
+  error: string | null
+}
+
+// ── Habit effect ─────────────────────────────────────────────────────────────
+// "Does this habit move this number?" See server/src/lib/habitEffect.ts.
+// `sentence` is already correctly hedged for display — render it verbatim
+// rather than composing a stronger claim from the raw numbers.
+export type EffectVerdict = 'insufficient' | 'no_effect' | 'associated'
+
+export interface EffectResult {
+  metric: WearableMetric
+  label: string
+  unit: string
+  lagDays: number
+  windowDays: number
+  hit: { n: number; median: number }
+  miss: { n: number; median: number }
+  difference: number
+  pValue: number
+  verdict: EffectVerdict
+  improved: boolean | null
+  needMoreDays?: number
+  sentence: string
+}
+
+export interface AvailableMetric {
+  key: WearableMetric
+  label: string
+  short: string
+  unit: string
+  direction: 'lower_better' | 'higher_better'
+  linked: boolean
+}

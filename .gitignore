@@ -11,8 +11,10 @@ server/dist
 .env.local
 *.local
 
-# firebase local cache
+# firebase local cache + CLI debug output
 .firebase
+firebase-debug.log
+firebase-debug.*.log
 
 # os
 .DS_Store

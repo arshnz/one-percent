@@ -1,4 +1,4 @@
-import type { User, Workstation, Habit, HabitToday, HabitLog, CreateHabitInput, Goldilocks, Momentum, CanvasNode, CanvasNodeType, StickyColor, AutomaticityState, AutomaticityResult, Phase, HabitBlueprint, CanvasSynthesis, CoachConversationSummary, CoachConversation, Goal, GoalDomain, GoalStatus, Assessment, CompassExtract, CheckIn, CheckInCurrent, SetbackPlan, CompassDraft, CompassSnapshot, CompassSnapshotSummary } from '@/types'
+import type { WearableDay, WearableStatus, EffectResult, AvailableMetric, WearableMetric, User, Workstation, Habit, HabitToday, HabitLog, CreateHabitInput, Goldilocks, Momentum, CanvasNode, CanvasNodeType, StickyColor, AutomaticityState, AutomaticityResult, Phase, HabitBlueprint, CanvasSynthesis, CoachConversationSummary, CoachConversation, Goal, GoalDomain, GoalStatus, Assessment, CompassExtract, CheckIn, CheckInCurrent, SetbackPlan, CompassDraft, CompassSnapshot, CompassSnapshotSummary } from '@/types'
 import { auth as firebaseAuth } from './firebase'
 import { API_BASE } from './config'
 
@@ -49,6 +49,37 @@ export const notifications = {
       reminders: { considered: number; sent: number; emails: number; pushes: number; pruned: number }
       digest: { considered: number; sent: number }
     }>('/notifications/test-run', { method: 'POST' }),
+}
+
+// Wearable data is owned by the user, not a workstation — the Body page works
+// with no habits at all.
+export const wearable = {
+  days: (params: { from?: string; to?: string; days?: number } = {}) => {
+    const q = new URLSearchParams()
+    if (params.from) q.set('from', params.from)
+    if (params.to) q.set('to', params.to)
+    if (params.days) q.set('days', String(params.days))
+    const qs = q.toString()
+    return request<{ from: string; to: string; days: WearableDay[] }>(`/wearable/days${qs ? `?${qs}` : ''}`)
+  },
+  status: () => request<WearableStatus>('/wearable/status'),
+  // Proxied through the server, which holds the collector's secret.
+  syncNow: () => request<{ ok: boolean; detail: string }>('/wearable/sync-now', { method: 'POST' }),
+}
+
+// Whether a habit is associated with a change in a measured metric.
+export const effect = {
+  get: (wsId: string, habitId: string) =>
+    request<{ results: EffectResult[] }>(`/workstations/${wsId}/habits/${habitId}/effect`),
+  available: (wsId: string, habitId: string) =>
+    request<{ metrics: AvailableMetric[] }>(`/workstations/${wsId}/habits/${habitId}/effect/available`),
+  link: (wsId: string, habitId: string, metric: WearableMetric, lagDays = 1) =>
+    request(`/workstations/${wsId}/habits/${habitId}/effect/link`, {
+      method: 'PUT',
+      body: JSON.stringify({ metric, lagDays }),
+    }),
+  unlink: (wsId: string, habitId: string, metric: WearableMetric) =>
+    request(`/workstations/${wsId}/habits/${habitId}/effect/link?metric=${metric}`, { method: 'DELETE' }),
 }
 
 export const workstations = {

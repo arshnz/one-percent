@@ -1,6 +1,6 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
-  Rocket, BarChart3, Sparkles, Settings, LogOut, GraduationCap,
+  Rocket, BarChart3, Sparkles, Settings, LogOut, GraduationCap, Activity,
   Compass, PanelLeftClose, PanelLeftOpen, type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -25,6 +25,7 @@ const items: NavItem[] = [
   { to: '/app/compass', icon: Compass, label: 'Compass' },
   { to: '/app/coach', icon: GraduationCap, label: 'Learning', match: ['/app/coach', '/app/theory'] },
   { to: '/app/momentum', icon: BarChart3, label: 'Momentum' },
+  { to: '/app/body', icon: Activity, label: 'The Body' },
   { to: '/app/canvas', icon: Sparkles, label: 'Vision Canvas' },
   { to: '/app/settings', icon: Settings, label: 'Settings' },
 ]

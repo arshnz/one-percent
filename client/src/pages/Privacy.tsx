@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 // policy URL, and Apple's reviewers do open it. Keep it truthful and specific —
 // it has to match the privacy nutrition labels on the store listing.
 
-const UPDATED = '9 September 2026'
+const UPDATED = '10 September 2026'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -51,6 +51,23 @@ export function PrivacyPage() {
           <p>
             <strong className="font-medium text-text-1">Notification handles.</strong> If you
             turn on reminders, a push token for each device you enable them on.
+          </p>
+          <p>
+            <strong className="font-medium text-text-1">Health and fitness data, if you
+            connect a wearable.</strong> Only if you connect Garmin. Then the app stores, per
+            day: how long you slept and in which stages, your sleep score, resting heart rate,
+            overnight heart-rate variability, Body Battery, stress score, breathing rate,
+            steps and active minutes — plus the start time, duration, distance and average
+            heart rate of recorded activities. This is used to draw it back to you on The
+            Body page, and to compare the days you kept a habit against the days you did not.
+            It is never shared, never sold, and connecting a wearable is entirely optional —
+            the app works fully without one.
+          </p>
+          <p>
+            <strong className="font-medium text-text-1">Your Garmin sign-in.</strong> Your
+            Garmin password is never stored or seen by this app. Signing in happens on your
+            own machine and only the resulting access tokens are kept, encrypted, so the sync
+            can keep running. Disconnecting deletes them.
           </p>
           <p>
             There is no advertising, no analytics, no tracking pixels, and no third-party

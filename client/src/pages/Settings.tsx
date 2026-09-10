@@ -8,6 +8,7 @@ import { enablePushOnThisDevice, pushSupported } from '@/lib/push'
 import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { cn } from '@/lib/utils'
+import { GarminCard } from '@/components/settings/GarminCard'
 
 function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
   return (
@@ -153,6 +154,8 @@ export function SettingsPage() {
         </section>
 
         {/* Personal context for AI */}
+        <GarminCard />
+
         <section className="rounded-2xl border border-border bg-surface p-5 shadow-card">
           <div className="mb-1 flex items-center gap-2">
             <Sparkles size={14} className="text-accent" />

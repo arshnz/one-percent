@@ -1,0 +1,8 @@
+# garminconnect replaced garth: Garmin's March 2026 TLS fingerprinting +
+# Cloudflare broke garth's mobile sign-in and it is deprecated upstream.
+# garminconnect moved to curl_cffi (real browser TLS fingerprint) in 0.3.0.
+# 0.3.3+ requires Python 3.12, which matches the python312 runtime in
+# firebase.json — keep those two in step.
+garminconnect>=0.3.13
+firebase-functions>=0.4.2
+requests>=2.32.0

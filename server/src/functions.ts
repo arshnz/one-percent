@@ -21,6 +21,14 @@ export const api = onRequest(
       // this Express app, so it needs the push + email secrets too.
       'GMAIL_USER', 'GMAIL_APP_PASSWORD',
       'VAPID_PUBLIC_KEY', 'VAPID_PRIVATE_KEY', 'VAPID_SUBJECT',
+      // The Garmin collector POSTs to /api/wearable/ingest with this shared
+      // secret. Create it in Secret Manager BEFORE deploying — naming a secret
+      // that doesn't exist yet fails the whole functions deploy (see the note
+      // on LAUNCHER_SA_KEY below).
+      'WEARABLE_INGEST_SECRET',
+      // Where the Garmin collector's manual trigger lives, so Settings can
+      // offer 'sync now'. Optional: the route 503s cleanly when unset.
+      'GARMIN_SYNC_URL',
     ],
   },
   app

@@ -15,6 +15,8 @@ import automaticityRoutes from './routes/automaticity.js'
 import coachRoutes from './routes/coach.js'
 import aiRoutes from './routes/ai.js'
 import notificationRoutes from './routes/notifications.js'
+import wearableRoutes from './routes/wearable.js'
+import effectRoutes from './routes/effect.js'
 
 const app = express()
 
@@ -56,6 +58,7 @@ app.use('/api/workstations', workstationRoutes)
 app.use('/api/workstations/:wsId/habits', habitRoutes)
 app.use('/api/workstations/:wsId/habits/:habitId/logs', logRoutes)
 app.use('/api/workstations/:wsId/habits/:habitId/automaticity', automaticityRoutes)
+app.use('/api/workstations/:wsId/habits/:habitId/effect', effectRoutes)
 app.use('/api/workstations/:wsId/momentum', momentumRoutes)
 app.use('/api/workstations/:wsId/canvas', canvasRoutes)
 app.use('/api/workstations/:wsId/goals', goalRoutes)
@@ -64,6 +67,9 @@ app.use('/api/workstations/:wsId/compass', compassRoutes)
 app.use('/api/workstations/:wsId/coach', coachRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/notifications', notificationRoutes)
+// Mounted at the top level, not under a workstation: wearable data belongs to
+// the user and is readable with no habits at all.
+app.use('/api/wearable', wearableRoutes)
 
 app.use(notFound)
 app.use(errorHandler)

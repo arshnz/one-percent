@@ -15,30 +15,30 @@ datasource db {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  password     String        @default("")
-  name         String?
-  timezone        String        @default("Pacific/Auckland")
-  personalContext String?
+  id                 String             @id @default(cuid())
+  email              String             @unique
+  password           String             @default("")
+  name               String?
+  timezone           String             @default("Pacific/Auckland")
+  personalContext    String?
   // Reminder channel opt-ins (the nudge engine fans out to whichever are on).
-  emailReminders  Boolean       @default(true)
-  pushReminders   Boolean       @default(true)
+  emailReminders     Boolean            @default(true)
+  pushReminders      Boolean            @default(true)
   // Local YYYY-MM-DD of the last 6am "today's intentions" digest sent — dedup.
-  lastDigestOn    String?
+  lastDigestOn       String?
   // Structured snapshot from the Compass assessment (ABZ stage A): contentment,
   // priorities, high-quality hours, past sticky habits, obstacles. JSON.
-  assessment      String?
+  assessment         String?
   // Local YYYY-MM-DD of the last weekly check-in nudge sent — dedup guard.
   lastCheckinNudgeOn String?
   // Ia Rā's 7pm nudge. A different app entirely — it just borrows this server's
   // scheduler and Gmail transport, because Ia Rā shares a Firebase project with
   // a parked app and a functions deploy there can prune the other's `api`.
   lastIaRaNudgeOn    String?
-  createdAt       DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  workstations Workstation[]
-  pushSubscriptions PushSubscription[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  workstations       Workstation[]
+  pushSubscriptions  PushSubscription[]
 
   @@schema("habit")
 }
@@ -61,25 +61,25 @@ model PushSubscription {
 // Single container per user (auto-created on first sign-in). Kept to mirror the
 // ToDo app's auth/route/ownership plumbing; a habit user has exactly one.
 model Workstation {
-  id          String       @id @default(cuid())
-  userId      String
-  name        String       @default("My Habits")
-  createdAt   DateTime     @default(now())
-  deletedAt   DateTime?
+  id                 String              @id @default(cuid())
+  userId             String
+  name               String              @default("My Habits")
+  createdAt          DateTime            @default(now())
+  deletedAt          DateTime?
   // The autosaved Compass worksheet in progress (A/Z/B answers + goals). One
   // working draft per container; frozen copies live in CompassSnapshot.
-  compassDraft Json?
+  compassDraft       Json?
   // Cached Momentum insights — JSON string[] regenerated after each check-in
   // save, so the Momentum page reads instantly without an AI call.
   momentumInsights   String?
   momentumInsightsAt DateTime?
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  habits      Habit[]
-  canvasNodes CanvasNode[]
-  coachChats  CoachConversation[]
-  goals       Goal[]
-  checkIns    CheckIn[]
-  compassSnapshots CompassSnapshot[]
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  habits             Habit[]
+  canvasNodes        CanvasNode[]
+  coachChats         CoachConversation[]
+  goals              Goal[]
+  checkIns           CheckIn[]
+  compassSnapshots   CompassSnapshot[]
 
   @@unique([userId, name])
   @@schema("habit")
@@ -226,119 +226,120 @@ model Goal {
 }
 
 model Habit {
-  id            String      @id @default(cuid())
-  workstationId String
+  id                   String              @id @default(cuid())
+  workstationId        String
   // The goal this habit is the next step toward (ABZ: this habit is B).
-  goalId        String?
+  goalId               String?
   // 'build' (default — the original 4-laws flow) | 'break' (inverted 4 laws).
   // Break habits reuse most of this model with relabelled meaning; see below.
-  kind          String      @default("build")
+  kind                 String              @default("build")
   // Break only: 'abstain' (daily clean-day vote) | 'taper' (daily count under a
   // shrinking per-phase limit). Null for build habits.
-  breakMode     String?
+  breakMode            String?
   // Break only — "Make it invisible": the cue/trigger to remove or design around.
-  avoidTrigger      String?
+  avoidTrigger         String?
   // Break only — "Make it easy (for the replacement)": what to do INSTEAD when
   // the urge hits. Distinct from failSafeAction (the 2-minute resist gateway).
-  replacementAction String?
+  replacementAction    String?
   // Break only — "Make it difficult": the friction step / commitment device.
-  frictionDevice    String?
+  frictionDevice       String?
   // How the daily check-in is presented: 'hold' (hold-to-vote button) | 'yesno'
   // (a yes-or-no question card, e.g. "Did I sleep 8 hours last night?").
   // Taper break habits always use their count control and ignore this.
-  checkStyle    String      @default("hold")
+  checkStyle           String              @default("hold")
   // Optional wording for the yesno question; falls back to the phase target.
-  checkQuestion String?
+  checkQuestion        String?
   // Identity-oriented name, e.g. "I am someone who moves every day"
-  title         String
+  title                String
   // The emotional "why" — text and/or an image asset shown on every card
-  whyText       String?
-  whyImageUrl   String?
+  whyText              String?
+  whyImageUrl          String?
   // Implementation intention pieces (Atomic Habits template):
   // "After I [anchorRoutine], I will immediately [failSafeAction]."
   // Optional because the cue may instead be time- or location-based (see cueType).
-  anchorRoutine String?
+  anchorRoutine        String?
   // Cue category: habit_stack | time | location. Forces a concrete trigger.
-  cueType       String      @default("habit_stack")
+  cueType              String              @default("habit_stack")
   // Concrete cue specifics, used per cueType (HH:MM for time, free text for place).
-  cueTime       String?
-  cueLocation   String?
+  cueTime              String?
+  cueLocation          String?
   // Permanent 2-minute gateway — the microscopic version that NEVER scales up.
-  failSafeAction String
+  failSafeAction       String
   // Self-chosen immediate reward (Fogg) — fires the reinforcement loop on each rep.
-  celebration   String?
+  celebration          String?
   // Temptation bundle (Premack / "make it attractive") — a want paired WITH the
   // habit, e.g. "only listen to my podcast while on the treadmill". Distinct from
   // celebration: it pulls you IN before/during, rather than rewarding after.
-  temptationBundle String?
+  temptationBundle     String?
   // How the schedule is expressed:
   //   'days'   — fixed weekdays, read from scheduleDays (the original behaviour)
   //   'weekly' — a quota of timesPerWeek reps on ANY days, Mon–Sun
   // See server/src/lib/schedule.ts — the only place either field is interpreted.
-  scheduleType  String      @default("days")
+  scheduleType         String              @default("days")
   // JSON array of weekday numbers (0=Sun..6=Sat) the habit is scheduled for.
   // Authoritative for scheduleType 'days'; kept but unused for 'weekly'.
-  scheduleDays  String      @default("[0,1,2,3,4,5,6]")
+  scheduleDays         String              @default("[0,1,2,3,4,5,6]")
   // Weekly quota (1–6) for scheduleType 'weekly'. Null for 'days'. 7× a week is
   // just every day, so it belongs in 'days' mode rather than here.
-  timesPerWeek  Int?
+  timesPerWeek         Int?
   // Reminder time (HH:MM local) — the moment-of-choice nudge. Independent of
   // cueType so habit-stack/location habits can still be reminded.
-  reminderTime    String?
-  reminderEnabled Boolean    @default(true)
+  reminderTime         String?
+  reminderEnabled      Boolean             @default(true)
   // Local YYYY-MM-DD of the last reminder sent — dedup guard (one nudge/day).
-  lastRemindedOn  String?
+  lastRemindedOn       String?
   // Environment-priming rule surfaced by the future Nightstand Check.
-  nightstandRule String?
+  nightstandRule       String?
   // JSON array of {obstacle, plan} pairs — the workbook's "Potential Obstacles /
   // Plans to Overcome Them". Surfaced on never-miss-twice danger days.
-  setbackPlans  String      @default("[]")
+  setbackPlans         String              @default("[]")
   // The workbook Quick-Start worksheet's "focusing on a system, not a goal"
   // confirmation. Soft — a nudge the user acknowledged, never a save gate.
-  systemFocusConfirmed Boolean @default(false)
+  systemFocusConfirmed Boolean             @default(false)
   // Free-text per worksheet section so the user can improvise beyond the
   // structured blocks. JSON {cue,craving,response,reward,setbacks} of strings.
-  sectionNotes  String      @default("{}")
+  sectionNotes         String              @default("{}")
   // Temporary rest — set when the user pauses "it's too much right now". Paused
   // habits drop off Today, stop reminders/digest, and don't decay rhythm. Cleared
   // on resume. Distinct from archivedAt (permanent retirement).
-  pausedAt      DateTime?
-  archivedAt    DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  workstation   Workstation @relation(fields: [workstationId], references: [id], onDelete: Cascade)
-  goal          Goal?       @relation(fields: [goalId], references: [id], onDelete: SetNull)
-  phases        Phase[]
-  logs          HabitLog[]
-  checks        AutomaticityCheck[]
+  pausedAt             DateTime?
+  archivedAt           DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  workstation          Workstation         @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+  goal                 Goal?               @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  phases               Phase[]
+  logs                 HabitLog[]
+  checks               AutomaticityCheck[]
+  metricLinks          HabitMetricLink[]
 
   @@schema("habit")
 }
 
 model Phase {
-  id          String     @id @default(cuid())
-  habitId     String
-  phaseNumber Int
+  id               String              @id @default(cuid())
+  habitId          String
+  phaseNumber      Int
   // The actual daily target for this phase, e.g. "Walk 15 mins on treadmill".
-  targetText  String
+  targetText       String
   // The unambiguous finish line — when exactly a rep counts as done. Removes
   // self-negotiation ("both shoes on and standing outside", not "go for a walk").
   definitionOfDone String?
   // Completed reps required to graduate this phase (e.g. 30).
-  targetCount Int        @default(30)
+  targetCount      Int                 @default(30)
   // Taper break habits only: the max occurrences allowed per day at this phase
   // (e.g. 2 → 1 → 0). A day at or under the limit counts as a vote. Null for
   // build/abstain phases.
-  dailyLimit  Int?
+  dailyLimit       Int?
   // status: active | locked | ready | graduated
   // ready = rep floor (targetCount) reached; awaiting the Automaticity Check
-  status      String     @default("active")
-  graduatedAt DateTime?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  habit       Habit      @relation(fields: [habitId], references: [id], onDelete: Cascade)
-  logs        HabitLog[]
-  checks      AutomaticityCheck[]
+  status           String              @default("active")
+  graduatedAt      DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  habit            Habit               @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  logs             HabitLog[]
+  checks           AutomaticityCheck[]
 
   @@unique([habitId, phaseNumber])
   @@schema("habit")
@@ -350,7 +351,7 @@ model AutomaticityCheck {
   id        String   @id @default(cuid())
   habitId   String
   phaseId   String
-  scores    String   // JSON array of 4 ints (1–5 agreement)
+  scores    String // JSON array of 4 ints (1–5 agreement)
   mean      Float
   passed    Boolean
   createdAt DateTime @default(now())
@@ -361,27 +362,139 @@ model AutomaticityCheck {
 }
 
 model HabitLog {
-  id        String   @id @default(cuid())
-  habitId   String
-  phaseId   String?
+  id          String   @id @default(cuid())
+  habitId     String
+  phaseId     String?
   // YYYY-MM-DD in the user's local time.
-  date      String
+  date        String
   // status: target | failsafe | miss. target/failsafe each count as an Identity Vote.
-  status    String
+  status      String
   // Taper break habits only: how many times the bad habit happened today. The
   // status is derived from this vs the phase's dailyLimit. Null otherwise.
-  quantity  Int?
+  quantity    Int?
   // Goldilocks reflection: too_easy | just_right | too_hard
-  goldilocks String?
+  goldilocks  String?
   // "What got in the way?" on missed days — JSON array of short chip strings
   // (e.g. ["Tired","No time"]) plus an optional free-text note. Kept separate
   // so chip counts aggregate with a trivial parse.
-  missReasons String  @default("[]")
+  missReasons String   @default("[]")
   missNote    String?
-  createdAt DateTime @default(now())
-  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
-  phase     Phase?   @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  habit       Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  phase       Phase?   @relation(fields: [phaseId], references: [id], onDelete: SetNull)
 
   @@unique([habitId, date])
+  @@schema("habit")
+}
+
+// ── Wearables ────────────────────────────────────────────────────────────────
+// The objective counterpart to everything above. Every metric in this app is
+// otherwise self-reported (SRBAI, the weekly 1–10, a button press); these rows
+// are recorded by a device the user never has to remember to tell.
+//
+// Deliberately provider-agnostic: `source` is a column, not an assumption. The
+// unofficial garth collector writes these today and the official Garmin Health
+// API will write the same shape later — both through POST /api/wearable/ingest,
+// which is the only writer (see server/src/routes/wearable.ts).
+
+// One row per local calendar day per source. Every field is nullable: Garmin
+// reports different subsets depending on what the watch was worn for, and a day
+// with only a step count is still a day worth keeping.
+model WearableDay {
+  id     String @id @default(cuid())
+  userId String
+  // YYYY-MM-DD in the user's local time — the same key habit logs use, so the
+  // two can be joined on the date string without any timezone maths.
+  date   String
+  source String @default("garmin")
+
+  // Sleep. Garmin reports stage minutes; sleepScore is its own 0–100 index.
+  sleepMinutes    Int?
+  deepMinutes     Int?
+  remMinutes      Int?
+  sleepScore      Int?
+  // Cardio. hrvNight is the overnight average in milliseconds (RMSSD).
+  restingHr       Int?
+  hrvNight        Int?
+  // Garmin-proprietary. Body Battery runs 0–100; we keep the day's range.
+  bodyBatteryHigh Int?
+  bodyBatteryLow  Int?
+  stressAvg       Int?
+  respirationAvg  Float?
+  // Movement.
+  steps           Int?
+  activeMinutes   Int?
+
+  // The untouched provider payload. Nothing reads this yet — it exists so a
+  // metric we haven't modelled isn't lost to a backfill we can never redo.
+  raw       Json?
+  fetchedAt DateTime @default(now())
+
+  @@unique([userId, date, source])
+  @@index([userId, date])
+  @@schema("habit")
+}
+
+// A single recorded workout. Not used by any v1 feature — it is captured now
+// because `startedAt` is the one thing a backfill cannot reconstruct later, and
+// it's what a future anchoring upgrade and activity→habit verification need.
+model WearableActivity {
+  id          String   @id @default(cuid())
+  userId      String
+  source      String   @default("garmin")
+  // The provider's own id — the idempotency key for re-syncs.
+  externalId  String
+  // Provider activity type, lowercased: running | walking | strength_training | …
+  type        String
+  // When the activity actually began, as opposed to when anything was logged.
+  startedAt   DateTime
+  // The local date startedAt falls on, for joining against habit logs.
+  localDate   String
+  durationSec Int
+  distanceM   Float?
+  avgHr       Int?
+  raw         Json?
+
+  @@unique([source, externalId])
+  @@index([userId, localDate])
+  @@schema("habit")
+}
+
+// Ingest bookkeeping — one row per user per source. Makes a sync idempotent and
+// resumable, and gives the UI something honest to show when the unofficial
+// collector's session expires and needs a manual re-login.
+model WearableSync {
+  id           String    @id @default(cuid())
+  userId       String
+  source       String
+  lastSyncedAt DateTime?
+  // Latest local date successfully ingested — where an incremental sync resumes.
+  lastDate     String?
+  // 'ok' | 'error'
+  status       String    @default("ok")
+  error        String?
+
+  @@unique([userId, source])
+  @@schema("habit")
+}
+
+// Opt-in: "does this habit move this number?". Absent for most habits — a habit
+// with no link simply has no effect card. See server/src/lib/habitEffect.ts for
+// what gets computed, and why the wording there stays correlational.
+model HabitMetricLink {
+  id        String   @id @default(cuid())
+  habitId   String
+  // A nullable numeric column of WearableDay: restingHr | sleepMinutes |
+  // hrvNight | bodyBatteryHigh | stressAvg. Validated at the route, not here.
+  metric    String
+  // Which way is an improvement: 'lower_better' (resting HR, stress) |
+  // 'higher_better' (sleep, HRV). Drives the phrasing, never the maths.
+  direction String
+  // Measure the metric this many days AFTER the rep. 1 = "the night after".
+  lagDays   Int      @default(1)
+  createdAt DateTime @default(now())
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, metric])
   @@schema("habit")
 }

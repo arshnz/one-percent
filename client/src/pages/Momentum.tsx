@@ -10,6 +10,7 @@ import { HabitSparkline } from '@/components/momentum/HabitSparkline'
 import { MeasuredSeries } from '@/components/momentum/MeasuredSeries'
 import { CheckInHistory } from '@/components/momentum/CheckInHistory'
 import { InsightsCard } from '@/components/momentum/InsightsCard'
+import { HabitEffectCard } from '@/components/momentum/HabitEffectCard'
 import { Button } from '@/components/ui/Button'
 import { cn, getHabitColor } from '@/lib/utils'
 
@@ -260,6 +261,10 @@ export function MomentumPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Whether any of this shows up in something measured. Renders
+                    nothing at all when no wearable is connected. */}
+                <HabitEffectCard wsId={wsId!} habitId={h.habitId} />
               </section>
               )
             })}

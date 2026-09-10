@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { format, parseISO, addWeeks } from 'date-fns'
 import { getHabitColor } from '@/lib/utils'
+import { wearable as wearableApi } from '@/lib/api'
+import { WearableSeries } from './WearableSeries'
 import type { Momentum } from '@/types'
 
 // Mirrors PASS_THRESHOLD in server/src/routes/automaticity.ts — a mean of 4 on
@@ -8,18 +11,31 @@ import type { Momentum } from '@/types'
 const PASS_THRESHOLD = 4.0
 
 /**
- * The two series the app actually *measures*, as opposed to the compound curve,
- * which pictures the vote count. Both are sparse by nature and rendered that
- * way: an automaticity check only fires when a phase hits 'ready', and a rating
- * only exists for weeks the user filled in a check-in.
+ * The series the app actually *measures*, as opposed to the compound curve,
+ * which pictures the vote count. All are sparse by nature and rendered that
+ * way: an automaticity check only fires when a phase hits 'ready', a rating
+ * only exists for weeks the user filled in a check-in, and the watch is not
+ * always on the wrist.
+ *
+ * The first two are self-reported. The third — the wearable panel — is the only
+ * thing on this page recorded by something other than the user's own judgement,
+ * which is exactly why it belongs beside them rather than off on its own.
  */
 export function MeasuredSeries({ data }: { data: Momentum }) {
   const automaticity = useAutomaticityLines(data)
   const ratings = data.weeklyRatings?.filter((r) => r.rating !== null) ?? []
 
+  // Same query key as WearableSeries, so React Query serves both from one
+  // request; this call only decides whether the section has anything to show.
+  const { data: wearableDays } = useQuery({
+    queryKey: ['wearable-days', 90],
+    queryFn: () => wearableApi.days({ days: 90 }),
+  })
+
   const showAuto = automaticity.length > 0
   const showRatings = ratings.length >= 3
-  if (!showAuto && !showRatings) return null
+  const showWearable = (wearableDays?.days.length ?? 0) > 0
+  if (!showAuto && !showRatings && !showWearable) return null
 
   return (
     <div className="space-y-4">
@@ -28,13 +44,14 @@ export function MeasuredSeries({ data }: { data: Momentum }) {
           What you’ve measured
         </h2>
         <p className="mt-1 text-xs text-text-3">
-          Not the curve above — these are the raw numbers you recorded, drawn straight, nothing modelled.
+          Not the curve above — these are the raw numbers, drawn straight, nothing modelled.
         </p>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {showAuto && <AutomaticityChart lines={automaticity} />}
         {showRatings && <WeeklyRatings ratings={ratings as { weekOf: string; rating: number }[]} />}
       </div>
+      {showWearable && <WearableSeries />}
     </div>
   )
 }

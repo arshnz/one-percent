@@ -40,6 +40,7 @@ const SettingsPage = lazyWithReload(() => import('@/pages/Settings').then((m) =>
 const CompassPage = lazyWithReload(() => import('@/pages/Compass').then((m) => ({ default: m.CompassPage })))
 const TheoryPage = lazyWithReload(() => import('@/pages/Theory').then((m) => ({ default: m.TheoryPage })))
 const CheckInPage = lazyWithReload(() => import('@/pages/CheckIn').then((m) => ({ default: m.CheckInPage })))
+const BodyPage = lazyWithReload(() => import('@/pages/Body').then((m) => ({ default: m.BodyPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -139,6 +140,8 @@ const router = createBrowserRouter([
           { path: 'coach', element: <HabitCoachPage /> },
           { path: 'compass', element: <CompassPage /> },
           { path: 'momentum', element: <MomentumPage /> },
+          // Wearable data on its own terms — no habits required.
+          { path: 'body', element: <BodyPage /> },
           // The reminder nudges deep-link here; also the way back into a week
           // that was skipped from the Launchpad card.
           { path: 'checkin', element: <CheckInPage /> },
