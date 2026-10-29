@@ -23,7 +23,7 @@ enum Reminders {
     /// enough to leave four days to make good on a weekly quota.
     static let midWeekNudgeDay = 4
     static let checkInHour = 17
-    private static let prefix = "op."
+    static let prefix = "op."
 
     struct Planned: Equatable {
         let id: String
@@ -99,6 +99,16 @@ enum Reminders {
             "Time to \(target)",
             bundle.map { "Make it a treat — \($0)." } ?? "Cast today's vote — even the 2-minute version counts."
         )
+    }
+
+    /// The soonest planned notification, for Settings to show that reminders
+    /// are really queued on this phone.
+    static func next() async -> (title: String, at: Date)? {
+        let pending = await UNUserNotificationCenter.current().pendingNotificationRequests()
+        return pending
+            .filter { $0.identifier.hasPrefix(prefix) }
+            .compactMap { r in (r.trigger as? UNCalendarNotificationTrigger)?.nextTriggerDate().map { (r.content.title, $0) } }
+            .min { $0.1 < $1.1 }
     }
 
     /// Replace every pending One Percent notification with a fresh plan.

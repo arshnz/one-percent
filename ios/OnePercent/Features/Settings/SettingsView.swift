@@ -21,6 +21,7 @@ struct SettingsView: View {
     @State private var importing = false
     @State private var confirmErase = false
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
+    @State private var nextReminder: (title: String, at: Date)?
 
     private var profile: Profile? { profiles.first }
 
@@ -45,6 +46,18 @@ struct SettingsView: View {
                             if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                         }
                         .font(.system(size: 13))
+                    }
+                    if remindersOn && notificationStatus != .denied {
+                        if let n = nextReminder {
+                            LabeledContent("Next") {
+                                VStack(alignment: .trailing, spacing: 2) {
+                                    Text(n.at.formatted(.dateTime.weekday(.abbreviated).hour().minute()))
+                                    Text(n.title).font(.system(size: 11)).foregroundStyle(Theme.faint).lineLimit(1)
+                                }
+                            }
+                        } else {
+                            LabeledContent("Next", value: "Nothing this week")
+                        }
                     }
                 } header: {
                     Text("Reminders")
@@ -95,7 +108,10 @@ struct SettingsView: View {
             personalContext = p.personalContext ?? ""
             timezone = p.timezone
             remindersOn = p.remindersEnabled
-            Task { notificationStatus = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus }
+            Task {
+                notificationStatus = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+                nextReminder = await Reminders.next()
+            }
         }
         .sheet(item: $backup) { file in ShareSheet(items: [file.url]) }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { restore($0) }
