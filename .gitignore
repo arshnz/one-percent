@@ -31,3 +31,12 @@ xcuserdata/
 
 # DB export dumps — data, not code. Kept on disk, out of history.
 backups/*.json
+
+# --- Native iOS app (ios/) ---
+# Generated from ios/project.yml by `xcodegen` — the yml is the source of truth.
+ios/OnePercent.xcodeproj/
+# Golden-test fixtures are built from a personal data export; regenerate with
+# `npx tsx ios/Tools/golden.ts`.
+ios/OnePercentTests/Fixtures/*.json
+# Local iOS build output
+.build-ios/
