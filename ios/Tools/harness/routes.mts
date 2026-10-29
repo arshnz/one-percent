@@ -3,7 +3,7 @@
 
 export async function callRoute(
   router: any,
-  method: 'get' | 'post' | 'delete',
+  method: 'get' | 'post' | 'put' | 'patch' | 'delete',
   path: string,
   req: { params?: Record<string, string>; body?: any; query?: any; userId: string; userTimezone: string }
 ): Promise<{ status: number; body: any }> {

@@ -28,6 +28,8 @@ import logsRouter from '../../server/src/routes/logs.js'
 import checkinsRouter from '../../server/src/routes/checkins.js'
 import automaticityRouter from '../../server/src/routes/automaticity.js'
 import momentumRouter from '../../server/src/routes/momentum.js'
+import compassRouter from '../../server/src/routes/compass.js'
+import { scoreConcreteness } from '../../client/src/lib/concreteness.js'
 
 declare global {
   // eslint-disable-next-line no-var
@@ -230,14 +232,16 @@ function momentumShape(m: any) {
     totalVotes: m.totalVotes,
     totalRecoveries: m.totalRecoveries,
     consistency: m.consistency,
-    automaticity: m.automaticity.map((a: any) => ({ uid: a.habitId, mean: a.mean, passed: a.passed })),
+    // Keyed by title: habits created during the scenario get different ids on
+    // each side, but the same title.
+    automaticity: m.automaticity.map((a: any) => ({ uid: m.trajectory.find((t: any) => t.habitId === a.habitId)?.title, mean: a.mean, passed: a.passed })),
     weeklyRatings: m.weeklyRatings,
     ratio: m.ratio,
     contributions: m.contributions,
     habitCount: m.habitCount,
     topObstacle: m.topObstacle,
     trajectory: m.trajectory.map((t: any) => ({
-      uid: t.habitId,
+      uid: t.title,
       consistency: t.consistency,
       contributions: t.contributions.map((c: any) => ({
         date: c.date, count: c.count, wasSavedMiss: c.wasSavedMiss, status: c.status ?? null,
@@ -376,12 +380,212 @@ async function runOp(o: any) {
   throw new Error(`unknown op ${o.op}`)
 }
 
+// --- 3b. Designing habits + the Compass, driven like the web client --------
+//
+// The Architect page turns its form into route calls (create, or patch +
+// phase edits). `formOf` / `submitDraft` replay that exactly, so an op holds
+// the FORM the person filled in and both sides start from the same input.
+
+const emptyForm = {
+  kind: 'build', goalTitle: '', breakMode: 'abstain', checkStyle: 'hold', checkQuestion: '', avoidTrigger: '',
+  replacementAction: '', frictionDevice: '', title: '', whyText: '', cueType: 'habit_stack', anchorRoutine: '',
+  cueTime: '', cueLocation: '', failSafeAction: '', celebration: '', temptationBundle: '', targetText: '',
+  definitionOfDone: '', targetCount: 14, dailyLimit: 2, reminderTime: '', reminderEnabled: true, nightstandRule: '',
+  systemFocusConfirmed: false, scheduleType: 'days', days: [0, 1, 2, 3, 4, 5, 6], timesPerWeek: 3,
+  setbacks: [] as any[], sectionNotes: {} as any, extraPhases: [] as any[],
+}
+
+const goalIdByTitle = (t: string) => (t ? table('goal').find((g) => g.title === t)?.id ?? null : null)
+const habitByTitle = (t: string) => table('habit').find((h) => h.title === t)!
+
+function formOf(h: any) {
+  const phases = table('phase').filter((p) => p.habitId === h.id).sort((a, b) => a.phaseNumber - b.phaseNumber)
+  const phase = phases.find((p) => p.status === 'active' || p.status === 'ready') ?? null
+  return {
+    form: {
+      kind: h.kind, goalTitle: h.goalId ? table('goal').find((g) => g.id === h.goalId)?.title ?? '' : '',
+      breakMode: h.breakMode ?? 'abstain', checkStyle: h.checkStyle ?? 'hold', checkQuestion: h.checkQuestion ?? '',
+      avoidTrigger: h.avoidTrigger ?? '', replacementAction: h.replacementAction ?? '', frictionDevice: h.frictionDevice ?? '',
+      title: h.title, whyText: h.whyText ?? '', cueType: h.cueType, anchorRoutine: h.anchorRoutine ?? '', cueTime: h.cueTime ?? '',
+      cueLocation: h.cueLocation ?? '', failSafeAction: h.failSafeAction, celebration: h.celebration ?? '',
+      temptationBundle: h.temptationBundle ?? '', targetText: phase?.targetText ?? '', definitionOfDone: phase?.definitionOfDone ?? '',
+      targetCount: phase?.targetCount ?? 14, dailyLimit: phase?.dailyLimit ?? 2, reminderTime: h.reminderTime ?? '',
+      reminderEnabled: h.reminderEnabled ?? true, nightstandRule: h.nightstandRule ?? '', systemFocusConfirmed: h.systemFocusConfirmed ?? false,
+      scheduleType: h.scheduleType === 'weekly' ? 'weekly' : 'days', days: (() => { try { return JSON.parse(h.scheduleDays) } catch { return [0, 1, 2, 3, 4, 5, 6] } })(),
+      timesPerWeek: h.timesPerWeek ?? 3, setbacks: (() => { try { return JSON.parse(h.setbackPlans) } catch { return [] } })(),
+      sectionNotes: (() => { try { return JSON.parse(h.sectionNotes) } catch { return {} } })(),
+      extraPhases: phases.filter((p) => p.status === 'locked').map((p) => ({ id: p.id, targetText: p.targetText, definitionOfDone: p.definitionOfDone ?? '', targetCount: p.targetCount, dailyLimit: p.dailyLimit ?? 0 })),
+    },
+    editingPhaseId: phase?.id ?? null,
+  }
+}
+
+const cleanSetbacks = (rows: any[]) => rows.map((r) => ({ obstacle: r.obstacle.trim(), plan: r.plan.trim() })).filter((r) => r.obstacle && r.plan)
+const cleanNotes = (n: any) => { const o: any = {}; for (const k of ['cue', 'craving', 'response', 'reward', 'setbacks']) { const v = n[k]?.trim(); if (v) o[k] = v } return o }
+
+function payloadOf(form: any) {
+  const breaking = form.kind === 'break', taper = breaking && form.breakMode === 'taper'
+  const reminder = !form.reminderEnabled ? { reminderEnabled: false, reminderTime: null }
+    : { reminderEnabled: true, reminderTime: (form.reminderTime.trim() || (form.cueType === 'time' ? form.cueTime.trim() : '')) || null }
+  return {
+    goalId: goalIdByTitle(form.goalTitle),
+    breakMode: breaking ? form.breakMode : null,
+    checkStyle: taper ? 'hold' : form.checkStyle,
+    checkQuestion: form.checkStyle === 'yesno' && !taper ? form.checkQuestion.trim() || null : null,
+    avoidTrigger: breaking ? form.avoidTrigger.trim() || null : null,
+    replacementAction: breaking ? form.replacementAction.trim() || null : null,
+    frictionDevice: breaking ? form.frictionDevice.trim() || null : null,
+    title: form.title.trim(), whyText: form.whyText.trim() || null, whyImageUrl: null, cueType: form.cueType,
+    anchorRoutine: form.cueType === 'habit_stack' ? form.anchorRoutine.trim() : null,
+    cueTime: form.cueType === 'time' ? form.cueTime.trim() : null,
+    cueLocation: form.cueType === 'location' ? form.cueLocation.trim() : null,
+    failSafeAction: form.failSafeAction.trim(), celebration: form.celebration.trim() || null,
+    temptationBundle: form.temptationBundle.trim() || null,
+    ...(form.scheduleType === 'weekly' ? { scheduleType: 'weekly', timesPerWeek: form.timesPerWeek } : { scheduleType: 'days', scheduleDays: form.days, timesPerWeek: null }),
+    ...reminder,
+    nightstandRule: form.nightstandRule.trim() || null, setbackPlans: cleanSetbacks(form.setbacks),
+    systemFocusConfirmed: form.systemFocusConfirmed, sectionNotes: cleanNotes(form.sectionNotes),
+  }
+}
+
+async function designOp(o: any) {
+  const taperOf = (f: any) => f.kind === 'break' && f.breakMode === 'taper'
+  if (o.op === 'createHabit') {
+    const form = { ...emptyForm, ...o.form }
+    const taper = taperOf(form)
+    const body = { kind: form.kind, ...payloadOf(form), phases: [
+      { targetText: form.targetText.trim(), definitionOfDone: form.definitionOfDone.trim() || null, targetCount: form.targetCount, dailyLimit: taper ? form.dailyLimit : null },
+      ...form.extraPhases.map((p: any) => ({ targetText: p.targetText.trim(), definitionOfDone: p.definitionOfDone.trim() || null, targetCount: p.targetCount, dailyLimit: taper ? p.dailyLimit : null })),
+    ] }
+    const r = await callRoute(habitsRouter, 'post', '/', req({ body })).catch((e) => { console.error('createHabit failed:', e?.message ?? e); return { status: 500, body: null } })
+    return r.status >= 400 ? { error: true } : {}
+  }
+  if (o.op === 'editHabit') {
+    const h = habitByTitle(o.title)
+    const { form, editingPhaseId } = formOf(h)
+    Object.assign(form, o.patch ?? {})
+    const removed = (o.removeExtra ?? []).map((i: number) => form.extraPhases[i]?.id).filter(Boolean)
+    form.extraPhases = form.extraPhases.filter((_: any, i: number) => !(o.removeExtra ?? []).includes(i)).concat(o.appendExtra ?? [])
+    const taper = taperOf(form)
+    const r = await callRoute(habitsRouter, 'patch', '/:id', req({ params: { id: h.id }, body: payloadOf(form) })).catch(() => ({ status: 500 }))
+    if (r.status >= 400) return { error: true }
+    if (editingPhaseId) await callRoute(habitsRouter, 'patch', '/:id/phases/:phaseId', req({ params: { id: h.id, phaseId: editingPhaseId }, body: {
+      targetText: form.targetText.trim(), definitionOfDone: form.definitionOfDone.trim() || null, targetCount: form.targetCount, dailyLimit: taper ? form.dailyLimit : null } }))
+    for (const id of removed) await callRoute(habitsRouter, 'delete', '/:id/phases/:phaseId', req({ params: { id: h.id, phaseId: id } }))
+    for (const p of form.extraPhases) {
+      const body = { targetText: p.targetText.trim(), definitionOfDone: p.definitionOfDone.trim() || null, targetCount: p.targetCount, dailyLimit: taper ? p.dailyLimit : null }
+      if (p.id) await callRoute(habitsRouter, 'patch', '/:id/phases/:phaseId', req({ params: { id: h.id, phaseId: p.id }, body }))
+      else await callRoute(habitsRouter, 'post', '/:id/phases', req({ params: { id: h.id }, body }))
+    }
+    return {}
+  }
+  if (o.op === 'archiveHabit') {
+    await callRoute(habitsRouter, 'delete', '/:id', req({ params: { id: habitByTitle(o.title).id } }))
+    return {}
+  }
+  if (o.op === 'compassSave') { await callRoute(compassRouter, 'put', '/draft', req({ body: { draft: o.draft } })); return {} }
+  if (o.op === 'compassSnapshot') { await callRoute(compassRouter, 'post', '/snapshots', req({ body: { label: o.label } })); return {} }
+  if (o.op === 'compassRestoreLatest') {
+    const latest = [...table('compassSnapshot')].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0]
+    await callRoute(compassRouter, 'post', '/snapshots/:id/restore', req({ params: { id: latest.id } }))
+    return {}
+  }
+  if (o.op === 'compassReset') { await callRoute(compassRouter, 'post', '/reset', req()); return {} }
+  throw new Error(`unknown design op ${o.op}`)
+}
+
+function designSnapshot() {
+  const parse = (s: string) => { try { return JSON.parse(s) } catch { return s } }
+  const habits = table('habit').filter((h) => h.id.startsWith('stub')).sort((a, b) => (a.title < b.title ? -1 : 1)).map((h) => ({
+    kind: h.kind, breakMode: h.breakMode, checkStyle: h.checkStyle, checkQuestion: h.checkQuestion, avoidTrigger: h.avoidTrigger,
+    replacementAction: h.replacementAction, frictionDevice: h.frictionDevice, title: h.title, whyText: h.whyText, cueType: h.cueType,
+    anchorRoutine: h.anchorRoutine, cueTime: h.cueTime, cueLocation: h.cueLocation, failSafeAction: h.failSafeAction,
+    celebration: h.celebration, temptationBundle: h.temptationBundle, scheduleType: h.scheduleType, scheduleDays: parse(h.scheduleDays),
+    timesPerWeek: h.timesPerWeek, reminderTime: h.reminderTime, reminderEnabled: h.reminderEnabled, nightstandRule: h.nightstandRule,
+    setbackPlans: parse(h.setbackPlans), systemFocusConfirmed: h.systemFocusConfirmed, sectionNotes: parse(h.sectionNotes),
+    goalTitle: h.goalId ? table('goal').find((g) => g.id === h.goalId)?.title ?? null : null, archived: !!h.archivedAt, paused: !!h.pausedAt,
+    phases: table('phase').filter((p) => p.habitId === h.id).sort((a, b) => a.phaseNumber - b.phaseNumber).map((p) => ({
+      n: p.phaseNumber, status: p.status, targetText: p.targetText, definitionOfDone: p.definitionOfDone, targetCount: p.targetCount, dailyLimit: p.dailyLimit,
+    })),
+  }))
+  const goals = table('goal').filter((g) => g.sourceNote === 'compass').sort((a, b) => (a.title < b.title ? -1 : a.title > b.title ? 1 : 0)).map((g) => ({
+    title: g.title, domain: g.domain, whyText: g.whyText, timeframe: g.timeframe, sourceId: g.sourceId, status: g.status,
+  }))
+  const pausedLinked = table('habit').filter((h) => h.goalId && h.pausedAt && !h.archivedAt).map((h) => h.title).sort()
+  const user = table('user')[0]
+  const assessment = user.assessment ? JSON.parse(user.assessment) : null
+  return { habits, goals, pausedLinked, assessment, snapshots: table('compassSnapshot').length }
+}
+
+const draftA = {
+  assessment: { contentmentPersonal: 3, contentmentPersonalWhy: 'tired', contentmentProfessional: 4, priorities: ['kids', '', 'health'],
+    highQualityHours: '6-8am', workingWell: ['walks'], notWorking: [''], obstacles: ['late meetings'],
+    pastStickyHabits: [{ habit: 'flossing', whyItStuck: 'tied to brushing' }, { habit: '  ', whyItStuck: 'x' }] },
+  vision: { dreamBig: 'calm and strong', domainVisions: [{ domain: 'health', vision: 'run a half' }], idealIdentity: 'I am someone who shows up' },
+  goals: [
+    { id: 'goal-a', title: 'Run a half marathon', domain: 'health', whyText: ' for the kids ', timeframe: 'by June' },
+    { id: 'goal-b', title: 'Learn te reo Māori', domain: 'mind', whyText: '', timeframe: '' },
+    { id: 'goal-c', title: '   ', domain: 'money' },
+  ],
+}
+const draftB = { ...draftA, goals: [{ ...draftA.goals[0], title: 'Run a half marathon in under 2h' }, { id: 'goal-d', title: 'Save a house deposit', domain: 'money' }] }
+
+const readsForm = { title: 'I am someone who reads', cueType: 'location', cueLocation: 'the couch', failSafeAction: 'open the book', targetText: 'Read 5 pages',
+  checkStyle: 'yesno', checkQuestion: ' Did I read? ', reminderEnabled: false, goalTitle: 'Learn te reo Māori' }
+
+const designOps: any[] = [
+  // Make room under the six-habit cap.
+  { op: 'archiveHabit', title: 'synth-ladder' },
+  { op: 'archiveHabit', title: 'synth-taper' },
+  { op: 'archiveHabit', title: 'synth-weekly' },
+  { op: 'compassSave', draft: draftA },
+  { op: 'createHabit', form: { title: 'I am someone who runs', goalTitle: 'Run a half marathon', anchorRoutine: 'drop the kids at school', failSafeAction: 'put on my running shoes',
+      targetText: 'Run 10 mins', definitionOfDone: 'back at the gate', targetCount: 5, celebration: ' fist pump ', reminderTime: '07:30',
+      days: [1, 3, 5], setbacks: [{ obstacle: ' it rains ', plan: 'treadmill ' }, { obstacle: '', plan: 'x' }], sectionNotes: { cue: ' shoes by door ', craving: '  ' },
+      extraPhases: [{ targetText: 'Run 20 mins', definitionOfDone: '', targetCount: 10, dailyLimit: 0 }, { targetText: 'Run 30 mins', definitionOfDone: 'lap done', targetCount: 14, dailyLimit: 0 }] } },
+  { op: 'createHabit', form: { kind: 'break', breakMode: 'taper', title: 'I am someone free of late coffee', avoidTrigger: 'the 3pm slump', cueType: 'time', cueTime: '15:00',
+      replacementAction: 'a glass of water', failSafeAction: 'three breaths', targetText: '≤1 a day', targetCount: 7, dailyLimit: 1, checkStyle: 'yesno',
+      scheduleType: 'weekly', timesPerWeek: 4, reminderEnabled: true, extraPhases: [{ targetText: 'none', definitionOfDone: '', targetCount: 14, dailyLimit: 0 }] } },
+  // A seventh live habit: refused at the cap.
+  { op: 'createHabit', form: readsForm },
+  { op: 'editHabit', title: 'I am someone who runs', patch: { targetText: 'Run 12 mins', scheduleType: 'weekly', timesPerWeek: 3, celebration: '', whyText: 'energy' },
+      removeExtra: [0], appendExtra: [{ targetText: 'Run 45 mins', definitionOfDone: '', targetCount: 21, dailyLimit: 0 }] },
+  { op: 'editHabit', title: 'I am someone free of late coffee', patch: { scheduleType: 'days', days: [0, 6], avoidTrigger: 'the afternoon slump', dailyLimit: 0 } },
+  { op: 'compassSnapshot', label: ' Spring ' },
+  { op: 'compassSave', draft: draftB },
+  { op: 'compassRestoreLatest' },
+  { op: 'archiveHabit', title: 'I am someone free of late coffee' },
+  { op: 'createHabit', form: readsForm },
+  { op: 'compassReset' },
+]
+
 globalThis.setHarnessNow(NOW)
 const scenario = []
 for (const o of ops) {
   const result = await runOp(o)
   scenario.push({ ...o, result, habitAfter: o.habit ? habitSnapshot(o.habit) : null, checkinsAfter: o.habit ? null : checkinSnapshot() })
 }
+const design = []
+for (const o of designOps) {
+  const result = await designOp(o)
+  design.push({ ...o, result, after: designSnapshot() })
+}
+
+// Concreteness: the Architect's sharpening hints, over a spread of drafts.
+const concreteInputs = [
+  {}, { title: 'I am someone who runs', anchorRoutine: 'brush teeth', failSafeAction: 'shoes on', targetText: 'Run 15 mins', definitionOfDone: 'x', celebration: 'yay', temptationBundle: 'podcast' },
+  { title: 'run more', anchorRoutine: 'wake', failSafeAction: 'go for a long run and then stretch', targetText: 'run a lot' },
+  { title: "I'm a reader", cueType: 'time', cueTime: '7:00', failSafeAction: 'open the book', targetText: '10 pages', definitionOfDone: 'done' },
+  { title: 'Im the kind of person', cueType: 'location', cueLocation: 'x', targetText: '3x a week' },
+  { kind: 'break', title: 'I am someone who is free of scrolling', avoidTrigger: 'phone in bed', cueType: 'time', cueTime: '22:00', replacementAction: 'read', failSafeAction: 'phone face-down, 3 breaths', frictionDevice: 'charger in kitchen', temptationBundle: 'sleep', celebration: 'tell partner', targetText: 'Stay scroll-free 14 days' },
+  { kind: 'break', title: 'quit sugar', failSafeAction: 'a'.repeat(81), targetText: '2 glasses of water' },
+  { title: 'I am  someone', failSafeAction: 'one two three four five six seven eight nine ten eleven twelve thirteen', targetText: 'Walk 2km', definitionOfDone: ' ' },
+].flatMap((f) => [true, false].map((needsTarget) => {
+  const i = { ...emptyForm, ...f, needsTarget }
+  const r = scoreConcreteness(i as any)
+  return { input: f, needsTarget, score: r.score, checks: r.checks.map((c) => ({ key: c.key, passed: c.passed })) }
+}))
+
 const afterViews = [await snapshotViews(NOW), await snapshotViews('2026-10-30T03:00:00.000Z')]
 const afterMomentum = [await momentumAt(NOW)]
 
@@ -414,6 +618,8 @@ const golden = {
   afterViews,
   momentumViews,
   afterMomentum,
+  design,
+  concreteness: concreteInputs,
 }
 
 writeFileSync('ios/OnePercentTests/Fixtures/golden.json', JSON.stringify(golden))

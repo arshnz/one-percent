@@ -29,6 +29,8 @@ import SwiftData
     /// JSON array of strings — cached "What the data says".
     var momentumInsights: String?
     var momentumInsightsAt: Date?
+    /// Master switch for habit and check-in notifications.
+    var remindersEnabled: Bool = true
     var createdAt: Date = Date()
 
     init() {}

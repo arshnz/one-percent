@@ -102,9 +102,9 @@ enum Reminders {
     }
 
     /// Replace every pending One Percent notification with a fresh plan.
-    static func reschedule(habits: [Habit], checkIns: [CheckIn], tz: String, now: Date = Date()) async {
+    static func reschedule(habits: [Habit], checkIns: [CheckIn], tz: String, enabled: Bool = true, now: Date = Date()) async {
         let center = UNUserNotificationCenter.current()
-        let planned = plan(habits: habits, checkIns: checkIns, now: now, tz: tz)
+        let planned = enabled ? plan(habits: habits, checkIns: checkIns, now: now, tz: tz) : []
         let settings = await center.notificationSettings()
         if settings.authorizationStatus == .notDetermined && !planned.isEmpty {
             _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])

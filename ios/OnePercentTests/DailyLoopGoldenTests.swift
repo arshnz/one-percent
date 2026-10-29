@@ -116,7 +116,7 @@ private func momentumShape(_ m: MomentumData) -> Any {
         "totalVotes": m.totalVotes,
         "totalRecoveries": m.totalRecoveries,
         "consistency": cons(m.consistency),
-        "automaticity": m.automaticity.map { ["uid": $0.habitUid, "mean": $0.mean, "passed": $0.passed] as [String: Any] },
+        "automaticity": m.automaticity.map { a in ["uid": m.trajectory.first { $0.habit.uid == a.habitUid }!.habit.title, "mean": a.mean, "passed": a.passed] as [String: Any] },
         "weeklyRatings": m.weeklyRatings.map { ["weekOf": $0.weekOf, "rating": $0.rating] as [String: Any] },
         "ratio": ["successes": m.ratio.successes, "expected": m.ratio.expected, "pct": m.ratio.pct, "windowDays": m.ratio.windowDays],
         "contributions": m.contributions.map { ["date": $0.date, "count": $0.count] as [String: Any] },
@@ -124,7 +124,7 @@ private func momentumShape(_ m: MomentumData) -> Any {
         "topObstacle": m.topObstacle.map(obstacle) ?? NSNull(),
         "trajectory": m.trajectory.map { t -> [String: Any] in
             [
-                "uid": t.habit.uid,
+                "uid": t.habit.title,
                 "consistency": cons(t.consistency),
                 "contributions": t.contributions.map {
                     ["date": $0.date, "count": $0.count, "wasSavedMiss": $0.wasSavedMiss, "status": orNull($0.status), "scheduled": $0.scheduled, "missReasons": orNull($0.missReasons)] as [String: Any]
@@ -228,6 +228,7 @@ struct DailyLoopGoldenTests {
         let now = try #require(iso.date(from: g["now"] as! String))
         let today = LocalDate.of(now, tz: tz)
         let byUid = Dictionary(uniqueKeysWithValues: try ctx.fetch(FetchDescriptor<Habit>()).map { ($0.uid, $0) })
+        let importedUids = Set(byUid.keys)
 
         for (i, step) in (g["scenario"] as! [[String: Any]]).enumerated() {
             let op = step["op"] as! String
@@ -280,6 +281,14 @@ struct DailyLoopGoldenTests {
                 let got = canon(checkinsShape(try ctx.fetch(FetchDescriptor<CheckIn>()))), exp = canon(normaliseCheckins(want))
                 #expect(got == exp, "\(label) check-ins\nswift: \(got)\nweb:   \(exp)")
             }
+        }
+
+        for (i, step) in (g["design"] as! [[String: Any]]).enumerated() {
+            let result = runDesignOp(step, ctx: ctx, now: now)
+            let label = "design \(i) \(step["op"]!) \(step["title"] ?? "")"
+            #expect(canon(result) == canon(step["result"]!), "\(label) result")
+            let got = canon(try designShape(ctx, importedUids: importedUids)), want = canon(step["after"]!)
+            #expect(got == want, "\(label)\nswift: \(got)\nweb:   \(want)")
         }
 
         try expectViews(g["afterViews"] as! [[String: Any]], ctx: ctx, tz: tz, label: "after scenario")

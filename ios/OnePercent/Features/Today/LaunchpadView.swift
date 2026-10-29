@@ -3,11 +3,7 @@ import SwiftData
 
 // The Launchpad — a port of client/src/pages/Launchpad.tsx.
 struct LaunchpadView: View {
-    /// Wired up as later screens land (Architect, Compass).
-    var onAddHabit: (() -> Void)?
-    var onEditHabit: ((Habit) -> Void)?
-    var onOpenCompass: (() -> Void)?
-
+    @Environment(AppRouter.self) private var router
     @Environment(\.modelContext) private var ctx
     @Environment(\.scenePhase) private var scenePhase
     @Environment(Toasts.self) private var toasts
@@ -34,6 +30,9 @@ struct LaunchpadView: View {
         let live = habits.filter { $0.archivedAt == nil }
         let paused = live.filter { $0.pausedAt != nil }
         let running = live.count - paused.count
+        let onAddHabit: (() -> Void)? = { router.architect = ArchitectSeed() }
+        let onEditHabit: ((Habit) -> Void)? = { router.architect = ArchitectSeed(habit: $0) }
+        let onOpenCompass: (() -> Void)? = { router.tab = .compass }
 
         NavigationStack {
             ScrollView {
@@ -90,8 +89,12 @@ struct LaunchpadView: View {
             .refreshable { now = Date() }
             .toolbar(.hidden, for: .navigationBar)
         }
-        .onChange(of: scenePhase) { if scenePhase == .active { now = Date(); replan() } }
-        .task { replan() }
+        .onChange(of: scenePhase) { if scenePhase == .active { now = Date() } }
+        // Replan notifications whenever anything they depend on changes.
+        .task(id: reminderInputs) {
+            let enabled = profiles.first?.remindersEnabled ?? true
+            await Reminders.reschedule(habits: habits, checkIns: checkIns, tz: tz, enabled: enabled)
+        }
         // Midnight rolls the day over even if the app stays open.
         .task(id: payload.date) {
             let secondsToMidnight = 86_400 - Double(LocalDate.minutesOfDay(Date(), tz: tz) * 60) + 5
@@ -107,6 +110,11 @@ struct LaunchpadView: View {
             HStack(spacing: 6) {
                 Image(systemName: "paperplane").font(.system(size: 12))
                 Eyebrow("The Launchpad")
+                Spacer()
+                Button { router.showSettings = true } label: {
+                    Image(systemName: "gearshape").font(.system(size: 17)).foregroundStyle(Theme.ink2).frame(width: 36, height: 36)
+                }
+                .accessibilityLabel("Settings")
             }
             .foregroundStyle(Theme.faint)
             Text(Self.greeting(now) + (first.map { ", \($0)" } ?? ""))
@@ -173,10 +181,19 @@ struct LaunchpadView: View {
         .padding(.top, 18)
     }
 
-    private func replan() {
-        now = Date()
-        let habits = habits, checkIns = checkIns, tz = tz
-        Task { await Reminders.reschedule(habits: habits, checkIns: checkIns, tz: tz) }
+    private func replan() { now = Date() }
+
+    private var reminderInputs: Int {
+        var h = Hasher()
+        h.combine(LocalDate.of(now, tz: tz))
+        h.combine(profiles.first?.remindersEnabled)
+        for x in habits {
+            h.combine(x.uid); h.combine(x.reminderTime); h.combine(x.reminderEnabled); h.combine(x.pausedAt); h.combine(x.archivedAt)
+            h.combine(x.scheduleType); h.combine(x.scheduleDays); h.combine(x.timesPerWeek); h.combine(x.title)
+        }
+        for l in logs { h.combine(l.date); h.combine(l.status) }
+        for c in checkIns { h.combine(c.weekOf) }
+        return h.finalize()
     }
 
     static func greeting(_ d: Date) -> String {

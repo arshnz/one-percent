@@ -30,7 +30,9 @@ struct ImportView: View {
             .controlSize(.large)
 
             Button("Start fresh") {
-                ctx.insert(Profile())
+                let p = Profile()
+                p.timezone = TimeZone.current.identifier
+                ctx.insert(p)
                 try? ctx.save()
             }
             .controlSize(.large)

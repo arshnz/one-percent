@@ -13,7 +13,7 @@ type Row = Record<string, any>
 const db: Record<string, Row[]> = {
   user: [], workstation: [], habit: [], phase: [], habitLog: [], automaticityCheck: [],
   goal: [], checkIn: [], compassSnapshot: [], coachConversation: [], coachMessage: [],
-  habitMetricLink: [], wearableDay: [], wearableActivity: [],
+  habitMetricLink: [], wearableDay: [], wearableActivity: [], canvasNode: [], bookChunk: [],
 }
 
 // relation name on model → [target model, local key, foreign key, kind]
@@ -145,12 +145,30 @@ const defaults: Record<string, () => Row> = {
     freeform: null, aiSummary: null, status: 'completed', updatedAt: new Date(),
   }),
   phase: () => ({ definitionOfDone: null, dailyLimit: null, targetCount: 30, status: 'active', graduatedAt: null, updatedAt: new Date() }),
+  goal: () => ({ domain: 'health', whyText: null, timeframe: null, sourceNote: null, sourceId: null, status: 'active' }),
+  habit: () => ({ goalId: null, pausedAt: null, archivedAt: null, lastRemindedOn: null }),
+  compassSnapshot: () => ({ label: null }),
 }
 
 let nextId = 0
 function insert(model: string, data: Row): Row {
-  const row = { ...(defaults[model]?.() ?? {}), id: `stub${++nextId}`, createdAt: new Date(), ...data }
+  // Nested writes — `phases: { create: [...] }` — become child rows.
+  const nested: [string, Row[]][] = []
+  const own: Row = {}
+  for (const [k, v] of Object.entries(data)) {
+    if (relations[model]?.[k] && v && typeof v === 'object' && 'create' in v) {
+      nested.push([k, Array.isArray(v.create) ? v.create : [v.create]])
+    } else {
+      own[k] = v
+    }
+  }
+  const row = { ...(defaults[model]?.() ?? {}), id: `stub${++nextId}`, createdAt: new Date(), updatedAt: new Date(), ...own }
   db[model].push(row)
+  for (const [k, children] of nested) {
+    const [target, local, foreign, kind] = relations[model][k]
+    if (kind !== 'many') throw new Error(`prismaStub: nested create on ${model}.${k} unsupported`)
+    for (const c of children) insert(target, { ...c, [foreign]: row[local] })
+  }
   return row
 }
 
@@ -211,6 +229,9 @@ export const prisma: any = new Proxy({}, {
   get(_t, prop: string) {
     if (prop in db) return delegate(prop)
     if (prop === '$disconnect') return async () => {}
+    // Interactive transactions run against the same tables — the stub has no
+    // concurrency, so "all or nothing" is moot here.
+    if (prop === '$transaction') return async (fn: any) => (typeof fn === 'function' ? fn(prisma) : Promise.all(fn))
     throw new Error(`prismaStub: unsupported ${String(prop)}`)
   },
 })
