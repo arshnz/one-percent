@@ -41,7 +41,12 @@ enum DevImport {
         do {
             if args.contains("-eraseFirst") { try Importer.eraseAll(ctx) }
             guard try !Importer.hasData(ctx) else { return }
-            let summary = try Importer.run(try Data(contentsOf: URL(fileURLWithPath: args[i + 1])), into: ctx)
+            // Relative paths resolve against Documents — how a file copied onto
+            // a device with `devicectl device copy to` is found.
+            let raw = args[i + 1]
+            let url = raw.hasPrefix("/") ? URL(fileURLWithPath: raw)
+                : URL.documentsDirectory.appendingPathComponent(raw)
+            let summary = try Importer.run(try Data(contentsOf: url), into: ctx)
             print("DevImport:", summary)
         } catch {
             print("DevImport failed:", error)
