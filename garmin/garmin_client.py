@@ -18,9 +18,10 @@ server/src/routes/wearable.ts) so there is exactly one timezone authority.
 
 from __future__ import annotations
 
+import json
 import logging
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 log = logging.getLogger("garmin")
@@ -47,6 +48,28 @@ def _float(v: Any) -> float | None:
     return round(float(v), 1)
 
 
+def _local_minutes(ms: Any) -> int | None:
+    """Garmin's *TimestampLocal fields are epoch millis pre-shifted so that
+    reading them as UTC gives local wall-clock time. Converting to minutes
+    since midnight keeps that intent and drops every timezone question — and
+    minutes-of-day is exactly what the circular statistics want anyway."""
+    if not isinstance(ms, (int, float)) or isinstance(ms, bool):
+        return None
+    try:
+        t = datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
+    except (OverflowError, OSError, ValueError):
+        return None
+    return t.hour * 60 + t.minute
+
+
+def _slim(d: dict) -> dict:
+    """Keep the raw payload to scalars. It is a safety net for fields we have
+    not modelled yet — the cost of NOT keeping it is a backfill that can never
+    be redone — but Garmin also nests whole event arrays in there, and those
+    would bloat every row for no benefit."""
+    return {k: v for k, v in d.items() if isinstance(v, (int, float, str, bool))}
+
+
 def _prune(d: dict) -> dict:
     """Drop keys with no value. The server treats absent as 'no data this sync'
     and leaves whatever it already had alone, which is what we want."""
@@ -60,6 +83,7 @@ def fetch_day(client, day: date) -> dict:
     about marking days Garmin genuinely has nothing for."""
     ds = day.isoformat()
     out: dict[str, Any] = {"date": ds}
+    raw: dict[str, Any] = {}
 
     # --- daily summary: steps, resting HR, Body Battery, stress -----------
     try:
@@ -73,7 +97,15 @@ def fetch_day(client, day: date) -> dict:
             "bodyBatteryLow": _int(s.get("bodyBatteryLowestValue")),
             "stressAvg": _int(s.get("averageStressLevel")),
             "activeMinutes": _int(mod + vig) if (mod or vig) else None,
+            "sedentarySeconds": _int(s.get("sedentarySeconds")),
+            "bodyBatteryAtWake": _int(s.get("bodyBatteryAtWakeTime")),
+            "lowStressSeconds": _int(s.get("lowStressDuration")),
+            "highStressSeconds": _int(s.get("highStressDuration")),
+            "minHeartRate": _int(s.get("minHeartRate")),
+            "maxHeartRate": _int(s.get("maxHeartRate")),
+            "avgWakingRespiration": _float(s.get("avgWakingRespirationValue")),
         }))
+        raw["summary"] = _slim(s)
     except Exception as e:  # noqa: BLE001 — one bad endpoint must not stop the rest
         log.warning("daily summary failed for %s: %s", ds, e)
 
@@ -91,10 +123,18 @@ def fetch_day(client, day: date) -> dict:
             "remMinutes": _secs_to_mins(dto.get("remSleepSeconds")),
             "sleepScore": _int(overall.get("value")),
             "respirationAvg": _float(dto.get("averageRespirationValue")),
+            # When you actually went to sleep and woke — the fields that make
+            # sleep REGULARITY measurable. Garmin records them and scores
+            # neither.
+            "sleepStartMin": _local_minutes(dto.get("sleepStartTimestampLocal")),
+            "sleepEndMin": _local_minutes(dto.get("sleepEndTimestampLocal")),
+            "avgSleepStress": _float(dto.get("avgSleepStress")),
+            "awakeCount": _int(dto.get("awakeCount")),
             # Some firmware reports overnight HRV here; the dedicated endpoint
             # below is preferred and overwrites this when it has a value.
             "hrvNight": _int(dto.get("avgOvernightHrv")),
         }))
+        raw["sleep"] = _slim(dto)
     except Exception as e:  # noqa: BLE001
         log.warning("sleep failed for %s: %s", ds, e)
 
@@ -115,6 +155,110 @@ def fetch_day(client, day: date) -> dict:
     # row to mark the attempt, the gap filler would request those same days on
     # every run for the rest of time. The server stores a metric-less row; the
     # charts already treat null fields as gaps, so it renders identically.
+    if raw:
+        out["raw"] = raw
+    return out
+
+
+# Every per-day endpoint worth calling, after removing the duplicates the
+# survey exposed:
+#   get_stats == get_user_summary == the summary half of get_stats_and_body,
+#   get_all_day_stress == get_stress_data,
+#   get_max_metrics == get_max_metrics_range,
+#   get_daily_weigh_ins == get_body_composition.
+# Keeping one of each saves roughly 40 KB and four requests per day for nothing.
+#
+# (domain, method). Order is roughly most- to least-valuable so that a run cut
+# short by a timeout still got the important ones.
+RAW_DOMAINS: list[tuple[str, str]] = [
+    ("statsAndBody", "get_stats_and_body"),
+    ("sleep", "get_sleep_data"),
+    ("hrv", "get_hrv_data"),
+    ("trainingReadiness", "get_training_readiness"),
+    ("morningReadiness", "get_morning_training_readiness"),
+    ("trainingStatus", "get_training_status"),
+    ("maxMetrics", "get_max_metrics"),
+    ("stress", "get_all_day_stress"),
+    ("bodyBatteryEvents", "get_body_battery_events"),
+    ("hr", "get_heart_rates"),
+    ("respiration", "get_respiration_data"),
+    ("steps", "get_steps_data"),
+    ("spo2", "get_spo2_data"),
+    ("floors", "get_floors"),
+    ("intensityMinutes", "get_intensity_minutes_data"),
+    ("fitnessAge", "get_fitnessage_data"),
+    ("rhrDay", "get_rhr_day"),
+    ("hydration", "get_hydration_data"),
+    ("allDayEvents", "get_all_day_events"),
+    ("lifestyle", "get_lifestyle_logging_data"),
+    ("bodyComposition", "get_daily_weigh_ins"),
+    ("nutrition", "get_nutrition_daily_food_log"),
+]
+
+# Anything under this is Garmin's way of saying "nothing here" — an empty dict,
+# an empty list, a null. Not worth a row.
+MIN_PAYLOAD_CHARS = 20
+
+
+def fetch_raw_day(client, day: date) -> list[dict]:
+    """Every endpoint for one day, verbatim.
+
+    Each call is isolated: an endpoint that starts failing costs its own domain
+    and nothing else. That matters more here than anywhere — this is the
+    capture layer, and a single bad endpoint must never cost a day of the other
+    twenty.
+    """
+    ds = day.isoformat()
+    out: list[dict] = []
+    for domain, method in RAW_DOMAINS:
+        fn = getattr(client, method, None)
+        if fn is None:
+            continue
+        try:
+            payload = fn(ds)
+        except Exception as e:  # noqa: BLE001
+            log.warning("raw %s failed for %s: %s", domain, ds, e)
+            time.sleep(REQUEST_PAUSE_SEC)
+            continue
+        if payload is None:
+            time.sleep(REQUEST_PAUSE_SEC)
+            continue
+        try:
+            if len(json.dumps(payload, default=str)) < MIN_PAYLOAD_CHARS:
+                time.sleep(REQUEST_PAUSE_SEC)
+                continue
+        except (TypeError, ValueError):
+            time.sleep(REQUEST_PAUSE_SEC)
+            continue
+        out.append({"date": ds, "domain": domain, "payload": payload})
+        time.sleep(REQUEST_PAUSE_SEC)
+    return out
+
+
+def fetch_activity_raw(client, external_id: str, summary: dict) -> list[dict]:
+    """The full record for one activity, plus its detail streams.
+
+    `details` is by far the largest single payload Garmin returns (~300 KB —
+    the per-second sensor streams). It is also the only place the shape of a
+    session lives, so it is exactly the thing that would be painful to discover
+    we had thrown away.
+    """
+    out = [{"externalId": external_id, "domain": "summary", "payload": summary}]
+    for domain, method in [
+        ("details", "get_activity_details"),
+        ("splits", "get_activity_splits"),
+        ("hrZones", "get_activity_hr_in_timezones"),
+    ]:
+        fn = getattr(client, method, None)
+        if fn is None:
+            continue
+        try:
+            payload = fn(external_id)
+            if payload is not None:
+                out.append({"externalId": external_id, "domain": domain, "payload": payload})
+        except Exception as e:  # noqa: BLE001
+            log.warning("activity %s %s failed: %s", external_id, domain, e)
+        time.sleep(REQUEST_PAUSE_SEC)
     return out
 
 

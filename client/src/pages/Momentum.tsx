@@ -61,7 +61,7 @@ export function MomentumPage() {
           <CompoundCurve data={data} />
 
           {/* Natural-language read of recent check-ins, served from cache. */}
-          <InsightsCard insights={data.insights} />
+          <InsightsCard insights={data.insights} wsId={wsId!} />
 
           {/* Primary metrics */}
           <div className="grid gap-4 sm:grid-cols-2">

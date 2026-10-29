@@ -6,6 +6,9 @@ import { prisma } from '../lib/prisma.js'
 import { assertWorkstation } from '../lib/workstation.js'
 import { embed, toVectorLiteral } from '../lib/embeddings.js'
 import { parseSchedule, resolveRange, weekDatesOf, weekdayOf } from '../lib/schedule.js'
+import { computeHabitEffects, computeMissPredictors } from '../lib/habitEffect.js'
+import { WEARABLE_METRICS, type WearableMetric } from '../lib/wearableMetrics.js'
+import { localDate } from '../lib/time.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -768,6 +771,86 @@ router.post('/checkin-summary', async (req: AuthRequest, res, next) => {
 // regenerated after each check-in save and cached on the workstation so the
 // Momentum page is a pure fast read.
 
+// What the wearable adds to the insights pack.
+//
+// Two kinds of thing, and the distinction matters. The descriptive block is
+// just "here is roughly where your numbers sit" — safe to paraphrase. The
+// verdicts are the only sanctioned source of any CLAIM about a relationship,
+// because they have been through a permutation test. The system prompt forbids
+// the model from deriving its own; without that it would happily read two
+// medians, spot a difference, and announce a discovery.
+async function buildWearableBlock(wsId: string, userId: string, tz: string): Promise<string> {
+  const today = localDate(new Date(), tz)
+  const day30 = localDate(new Date(Date.now() - 30 * 86_400_000), tz)
+  const day90 = localDate(new Date(Date.now() - 90 * 86_400_000), tz)
+
+  const days = await prisma.wearableDay.findMany({
+    where: { userId, date: { gte: day90, lte: today } },
+    select: {
+      date: true, sleepMinutes: true, restingHr: true, hrvNight: true,
+      bodyBatteryHigh: true, stressAvg: true,
+    },
+    orderBy: { date: 'asc' },
+  })
+  if (days.length < 14) return '' // too thin to describe honestly
+
+  const med = (xs: number[]) => {
+    if (!xs.length) return null
+    const s = [...xs].sort((a, b) => a - b)
+    const m = s.length >> 1
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+  }
+  const pull = (rows: typeof days, k: WearableMetric) =>
+    rows.map((r) => (r as Record<string, unknown>)[k]).filter((v): v is number => typeof v === 'number')
+
+  const recent = days.filter((d) => d.date >= day30)
+  const lines: string[] = []
+  for (const k of ['sleepMinutes', 'restingHr', 'hrvNight', 'bodyBatteryHigh', 'stressAvg'] as WearableMetric[]) {
+    const meta = WEARABLE_METRICS[k]
+    const r = med(pull(recent, k))
+    const all = med(pull(days, k))
+    if (r === null || all === null) continue
+    const fmt = (v: number) =>
+      k === 'sleepMinutes' ? `${Math.floor(v / 60)}h ${String(Math.round(v % 60)).padStart(2, '0')}m` : v.toFixed(meta.precision)
+    lines.push(`- ${meta.label}: ${fmt(r)} typical over the last 30 days (${fmt(all)} over 90).`)
+  }
+
+  // Tested verdicts — the only place a relationship may be claimed from.
+  const [predictors, links] = await Promise.all([
+    computeMissPredictors(wsId, userId, tz),
+    prisma.habitMetricLink.findMany({
+      where: { habit: { workstationId: wsId, archivedAt: null } },
+      include: { habit: { select: { id: true, title: true } } },
+    }),
+  ])
+
+  const verdicts: string[] = []
+  for (const p of predictors) {
+    if (p.verdict !== 'insufficient') verdicts.push(`- ${p.sentence}`)
+  }
+
+  const byHabit = new Map<string, { title: string; specs: { metric: WearableMetric; lagDays: number }[] }>()
+  for (const l of links) {
+    const e = byHabit.get(l.habitId) ?? { title: l.habit.title, specs: [] }
+    e.specs.push({ metric: l.metric as WearableMetric, lagDays: l.lagDays })
+    byHabit.set(l.habitId, e)
+  }
+  for (const [habitId, { title, specs }] of byHabit) {
+    const results = await computeHabitEffects(habitId, userId, specs, tz)
+    for (const r of results) {
+      if (r.verdict !== 'insufficient') verdicts.push(`- "${title}" vs ${r.label}: ${r.sentence}`)
+    }
+  }
+
+  return [
+    `Wearable data, ${days.length} days recorded (descriptive only — do NOT infer relationships from these numbers):`,
+    lines.join('\n'),
+    verdicts.length
+      ? `Tested findings (these HAVE been statistically checked — the only relationships you may state):\n${verdicts.join('\n')}`
+      : 'No relationship has been statistically tested yet.',
+  ].filter(Boolean).join('\n\n')
+}
+
 async function buildInsightsPack(wsId: string): Promise<string> {
   const day30 = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10)
   const [checkins, missLogs, habits, goals] = await Promise.all([
@@ -783,6 +866,21 @@ async function buildInsightsPack(wsId: string): Promise<string> {
     }),
     prisma.goal.findMany({ where: { workstationId: wsId, status: 'active' }, select: { title: true } }),
   ])
+
+  // Wearable context, when there is any. Never blocks the pack: if the block
+  // throws, the insights are simply the ones this app has always written.
+  const ws = await prisma.workstation.findUnique({
+    where: { id: wsId },
+    select: { userId: true, user: { select: { timezone: true } } },
+  })
+  let wearableBlock = ''
+  if (ws) {
+    try {
+      wearableBlock = await buildWearableBlock(wsId, ws.userId, ws.user.timezone || 'Pacific/Auckland')
+    } catch (e) {
+      console.error('[insights] wearable block failed', e)
+    }
+  }
 
   const checkinBlocks = checkins.map((c) => {
     if (c.status === 'skipped') return `Week of ${c.weekOf}: skipped the check-in.`
@@ -812,6 +910,7 @@ async function buildInsightsPack(wsId: string): Promise<string> {
       : 'No active habits.',
     checkinBlocks.length ? `Recent weekly check-ins (newest first):\n${checkinBlocks.join('\n')}` : 'No check-ins yet.',
     missLines.length ? `Missed days, last 30 days (newest first):\n${missLines.join('\n')}` : 'No recorded misses in the last 30 days.',
+    wearableBlock,
   ].filter(Boolean).join('\n\n')
 }
 
@@ -822,7 +921,18 @@ Rules:
 - Address the user as "you". No guilt — a missed day is data, not failure.
 - Include at least one forward-looking suggestion they could act on next week.
 - No markdown, no numbering, no headers — just the insight sentences.
-- If the data is thin, say what you can honestly and keep it to 3 insights.`
+- If the data is thin, say what you can honestly and keep it to 3 insights.
+
+About the wearable numbers, if any are present:
+- You may describe them ("your sleep has been sitting around seven hours").
+- You may NOT invent a relationship between them and anything else. Do not
+  compare two numbers, notice a gap, and present it as a pattern — a difference
+  between two medians is usually noise, and you have no way to tell from here.
+- Only the block headed "Tested findings" has been statistically checked. Those
+  are the ONLY relationships you may state, and you must keep their hedging:
+  they are associations, never proof that one thing caused the other.
+- At most one insight may be about the wearable data. This is a habit app; the
+  person's own words about their week matter more than their resting heart rate.`
 
 router.post('/insights', async (req: AuthRequest, res, next) => {
   try {

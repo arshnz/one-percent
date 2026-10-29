@@ -424,6 +424,32 @@ model WearableDay {
   // Movement.
   steps           Int?
   activeMinutes   Int?
+  sedentarySeconds Int?
+
+  // Sleep TIMING, as local minutes since midnight (0-1439). Stored as minutes
+  // rather than a timestamp because that is what circular statistics need, and
+  // it sidesteps every timezone question: 23:50 is 1430 wherever you were.
+  // Garmin scores how long and how deeply you slept; it does not score WHEN,
+  // and bedtime regularity is among the better-evidenced sleep measures.
+  sleepStartMin   Int?
+  sleepEndMin     Int?
+
+  // Sleep quality beyond the stage split.
+  avgSleepStress  Float?
+  awakeCount      Int?
+
+  // Body Battery on waking — a truer "how recovered am I" reading than the
+  // day's peak, which can occur any time.
+  bodyBatteryAtWake Int?
+
+  // Stress composition. An average of 30 hides whether the day was evenly
+  // middling or violently split, and those are not the same day.
+  lowStressSeconds  Int?
+  highStressSeconds Int?
+
+  minHeartRate    Int?
+  maxHeartRate    Int?
+  avgWakingRespiration Float?
 
   // The untouched provider payload. Nothing reads this yet — it exists so a
   // metric we haven't modelled isn't lost to a backfill we can never redo.
@@ -496,5 +522,62 @@ model HabitMetricLink {
   habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
 
   @@unique([habitId, metric])
+  @@schema("habit")
+}
+
+// Everything Garmin will give us, verbatim.
+//
+// WearableDay is the curated layer: a dozen promoted columns the app queries
+// constantly. This is the other half — the complete payload of every endpoint,
+// one row per day per domain, stored exactly as Garmin returned it.
+//
+// The reasoning is asymmetric cost. Deciding later that we want a field we
+// never stored means re-walking two years of a rate-limited unofficial API,
+// assuming it still answers. Deciding later that we do not want a field we did
+// store costs a DELETE. A survey of the account found 41 live endpoints and
+// ~250 KB/day; at the 2.3x jsonb compression measured on this database that is
+// about 78 MB for two years, against 18 MB currently in use. Cheap insurance.
+//
+// Promote a field to a WearableDay column when the app queries it; leave the
+// rest here until it earns a column.
+model WearableRaw {
+  id     String @id @default(cuid())
+  userId String
+  // YYYY-MM-DD local, matching WearableDay.
+  date   String
+  source String @default("garmin")
+  // Which endpoint this came from: sleep | stress | hr | steps | respiration |
+  // bodyBatteryEvents | hrv | floors | statsAndBody | trainingReadiness |
+  // morningReadiness | trainingStatus | spo2 | fitnessAge | maxMetrics |
+  // intensityMinutes | hydration | rhrDay | allDayEvents | lifestyle | nutrition
+  domain String
+  // The response, untouched.
+  payload Json
+  // Serialized size at capture. Lets storage growth be tracked without
+  // scanning every payload.
+  bytes     Int      @default(0)
+  fetchedAt DateTime @default(now())
+
+  @@unique([userId, date, domain, source])
+  @@index([userId, domain, date])
+  @@schema("habit")
+}
+
+// The full record for one activity, plus its detail streams. Kept separate
+// from WearableRaw because activities are keyed by id and not by day — several
+// can share a date, and a long one spans two.
+model WearableActivityRaw {
+  id         String @id @default(cuid())
+  userId     String
+  source     String @default("garmin")
+  externalId String
+  // summary | details | splits | hrZones
+  domain     String
+  payload    Json
+  bytes      Int      @default(0)
+  fetchedAt  DateTime @default(now())
+
+  @@unique([source, externalId, domain])
+  @@index([userId, domain])
   @@schema("habit")
 }

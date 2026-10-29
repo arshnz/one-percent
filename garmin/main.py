@@ -22,6 +22,7 @@ from __future__ import annotations
 import base64
 import logging
 import os
+import time
 from datetime import date, datetime, timedelta
 
 import requests
@@ -29,7 +30,9 @@ from garminconnect import Garmin
 from firebase_functions import scheduler_fn, https_fn
 from firebase_functions.params import SecretParam
 
-from garmin_client import days_to_sync, fetch_activities, fetch_day
+from garmin_client import (
+    days_to_sync, fetch_activities, fetch_activity_raw, fetch_day, fetch_raw_day,
+)
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("garmin")
@@ -47,6 +50,15 @@ RECENT_DAYS = 10
 BACKFILL_BATCH = 45
 # How far back to bother going at all.
 BACKFILL_YEARS = 2
+
+# Verbatim capture is ~22 requests per day against 3 for the curated fields, so
+# it gets its own budget and its own cursor. A wall-clock budget rather than a
+# day count: endpoint latency varies enough that "20 days" can mean 90 seconds
+# or 400, and overrunning the function timeout loses the whole run's writes.
+RAW_BUDGET_SEC = 240
+# Newest activities whose full record (including the ~300 KB detail stream) to
+# pull each run.
+ACTIVITY_RAW_PER_RUN = 4
 
 SECRETS = [GARMIN_SESSION, WEARABLE_INGEST_SECRET, API_BASE]
 
@@ -98,7 +110,7 @@ def _resume_session() -> Garmin:
     return client
 
 
-def run_sync() -> str:
+def run_sync(force_days: int = 0, force_offset: int = 0) -> str:
     if not GARMIN_SESSION.value:
         return "skipped: GARMIN_SESSION unset"
 
@@ -123,7 +135,20 @@ def run_sync() -> str:
 
     today = datetime.now().date()
     floor = today - timedelta(days=365 * BACKFILL_YEARS)
-    wanted = days_to_sync(today, held, RECENT_DAYS, BACKFILL_BATCH, floor)
+
+    if force_days:
+        # Re-fetch days we already hold. Needed when a new field is added to
+        # the payload: the gap filler skips anything already stored, so without
+        # this a new column stays null on every historical day forever.
+        # Offset lets a long backfill be walked in chunks that each finish
+        # inside the function timeout.
+        wanted = [
+            today - timedelta(days=force_offset + i)
+            for i in range(force_days)
+            if (today - timedelta(days=force_offset + i)) >= floor
+        ]
+    else:
+        wanted = days_to_sync(today, held, RECENT_DAYS, BACKFILL_BATCH, floor)
 
     days = []
     for d in wanted:
@@ -133,12 +158,59 @@ def run_sync() -> str:
 
     activities = fetch_activities(client, limit=30)
 
+    # ── Verbatim capture ────────────────────────────────────────────────────
+    # Flushed to the server as it goes, NOT accumulated and posted at the end.
+    # The first version buffered everything: the run hit the 540s function
+    # timeout mid-fetch and every byte of six minutes' work was discarded,
+    # because nothing had been written yet. Streaming means a timeout costs
+    # the current day and nothing before it.
+    raw_held = set(st.get("rawHeld") or [])
+    activity_held = set(st.get("activityRawHeld") or [])
+    started = time.monotonic()
+    raw_sent = 0
+    raw_days = 0
+
+    def flush(payload_key: str, items: list) -> int:
+        if not items:
+            return 0
+        try:
+            res = _post("/api/wearable/ingest", {
+                "email": OWNER_EMAIL, "source": "garmin", payload_key: items,
+            })
+            return res.get("raws", 0)
+        except Exception as e:  # noqa: BLE001
+            log.warning("raw flush failed (%d items): %s", len(items), e)
+            return 0
+
+    pending: list[dict] = []
+    cursor = today
+    while cursor >= floor and (time.monotonic() - started) < RAW_BUDGET_SEC:
+        if cursor.isoformat() not in raw_held:
+            pending.extend(fetch_raw_day(client, cursor))
+            raw_days += 1
+            # A day is ~250 KB across ~20 rows; flush every couple of days so
+            # each request stays well inside the server's body limit.
+            if len(pending) >= 40:
+                raw_sent += flush("raws", pending)
+                pending = []
+        cursor -= timedelta(days=1)
+    raw_sent += flush("raws", pending)
+
+    # Full activity records. The detail stream alone is ~300 KB, so these go
+    # one at a time.
+    for a in activities:
+        if (time.monotonic() - started) > RAW_BUDGET_SEC + 120:
+            break
+        if a["externalId"] in activity_held:
+            continue
+        raw_sent += flush("activityRaws", fetch_activity_raw(client, a["externalId"], a))
+
     if not days and not activities:
-        return "nothing to send"
+        return f"ok: raw only — {raw_sent} payload(s) over {raw_days} day(s)"
 
     # Chunked so one request never carries more than the server's own cap.
     sent = 0
-    for i in range(0, len(days), 200):
+    for i in range(0, max(len(days), 1), 200):
         res = _post("/api/wearable/ingest", {
             "email": OWNER_EMAIL,
             "source": "garmin",
@@ -147,7 +219,11 @@ def run_sync() -> str:
         })
         sent += res.get("days", 0)
 
-    return f"ok: {sent} day(s), {len(activities)} activity/activities, {len(held)} already held"
+    return (
+        f"ok: {sent} curated day(s), {len(activities)} activities, "
+        f"raw {raw_sent} payload(s) over {raw_days} day(s); "
+        f"{len(held)} days held, {len(raw_held)} raw-complete"
+    )
 
 
 @scheduler_fn.on_schedule(
@@ -173,7 +249,10 @@ def garminsyncnow(req: https_fn.Request) -> https_fn.Response:
     if req.headers.get("x-ingest-secret") != WEARABLE_INGEST_SECRET.value:
         return https_fn.Response("unauthorised", status=401)
     try:
-        return https_fn.Response(run_sync(), status=200)
+        # ?force=60&offset=0 re-fetches days already held, oldest-bounded.
+        force = min(int(req.args.get("force", 0) or 0), 120)
+        offset = max(int(req.args.get("offset", 0) or 0), 0)
+        return https_fn.Response(run_sync(force, offset), status=200)
     except Exception as e:  # noqa: BLE001
         log.exception("[garminsyncnow] failed")
         _report_error(str(e))

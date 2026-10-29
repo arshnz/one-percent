@@ -4,6 +4,7 @@ import { Activity, AlertTriangle } from 'lucide-react'
 import { format, parseISO, formatDistanceToNow } from 'date-fns'
 import { wearable as wearableApi } from '@/lib/api'
 import { MetricPanel, type Slot } from '@/components/body/MetricPanel'
+import { FindingsPanel } from '@/components/body/FindingsPanel'
 import { cn } from '@/lib/utils'
 import type { WearableDay } from '@/types'
 
@@ -73,6 +74,7 @@ export function BodyPage() {
         </h1>
         <p className="mt-1 text-sm text-text-2">
           Measured while you slept and moved — nothing here was remembered, rated or typed in.
+          The charts are the evidence; the reading of them is above.
         </p>
       </header>
 
@@ -100,7 +102,9 @@ export function BodyPage() {
         </div>
       ) : (
         <div className="space-y-5">
-          <div className="flex items-center justify-between gap-3">
+          <FindingsPanel />
+
+          <div className="flex items-center justify-between gap-3 pt-1">
             <p className="text-xs text-text-3">
               {status?.lastSyncedAt
                 ? `Last synced ${formatDistanceToNow(parseISO(status.lastSyncedAt), { addSuffix: true })}`
@@ -121,6 +125,15 @@ export function BodyPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="pt-1">
+            <h2 className="text-xs font-semibold uppercase tracking-widest text-text-2">
+              The raw record
+            </h2>
+            <p className="mt-1 text-xs text-text-3">
+              Every day as it was measured. Nothing smoothed, nothing filled in.
+            </p>
           </div>
 
           <MetricPanel

@@ -567,3 +567,32 @@ export interface AvailableMetric {
   direction: 'lower_better' | 'higher_better'
   linked: boolean
 }
+
+// What the verbatim capture layer holds. Nothing renders these payloads
+// directly — this is for making the capture's progress and cost visible.
+export interface CaptureStatus {
+  domains: { domain: string; days: number; bytes: number }[]
+  totalRows: number
+  totalBytes: number
+  daysCaptured: number
+  firstDate: string | null
+  lastDate: string | null
+  activityRows: number
+  activityBytes: number
+}
+
+// A statistically tested observation about the body data alone — no habits
+// involved. See server/src/lib/bodyInsights.ts.
+export interface BodyFinding {
+  kind: 'sleep_regularity' | 'activity_impact' | 'weekday' | 'baseline_shift'
+  headline: string
+  detail: string
+  pValue?: number
+  metric?: WearableMetric
+}
+
+export interface BodyInsights {
+  days: number
+  findings: BodyFinding[]
+  activityTypes: string[]
+}

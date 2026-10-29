@@ -1,4 +1,4 @@
-import type { WearableDay, WearableStatus, EffectResult, AvailableMetric, WearableMetric, User, Workstation, Habit, HabitToday, HabitLog, CreateHabitInput, Goldilocks, Momentum, CanvasNode, CanvasNodeType, StickyColor, AutomaticityState, AutomaticityResult, Phase, HabitBlueprint, CanvasSynthesis, CoachConversationSummary, CoachConversation, Goal, GoalDomain, GoalStatus, Assessment, CompassExtract, CheckIn, CheckInCurrent, SetbackPlan, CompassDraft, CompassSnapshot, CompassSnapshotSummary } from '@/types'
+import type { CaptureStatus, BodyInsights, WearableDay, WearableStatus, EffectResult, AvailableMetric, WearableMetric, User, Workstation, Habit, HabitToday, HabitLog, CreateHabitInput, Goldilocks, Momentum, CanvasNode, CanvasNodeType, StickyColor, AutomaticityState, AutomaticityResult, Phase, HabitBlueprint, CanvasSynthesis, CoachConversationSummary, CoachConversation, Goal, GoalDomain, GoalStatus, Assessment, CompassExtract, CheckIn, CheckInCurrent, SetbackPlan, CompassDraft, CompassSnapshot, CompassSnapshotSummary } from '@/types'
 import { auth as firebaseAuth } from './firebase'
 import { API_BASE } from './config'
 
@@ -65,6 +65,8 @@ export const wearable = {
   status: () => request<WearableStatus>('/wearable/status'),
   // Proxied through the server, which holds the collector's secret.
   syncNow: () => request<{ ok: boolean; detail: string }>('/wearable/sync-now', { method: 'POST' }),
+  capture: () => request<CaptureStatus>('/wearable/capture'),
+  insights: () => request<BodyInsights>('/wearable/insights'),
 }
 
 // Whether a habit is associated with a change in a measured metric.

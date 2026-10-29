@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { prisma } from '../lib/prisma.js'
 import { requireAuth, AuthRequest } from '../middleware/auth.js'
 import { localDate, lastNDates } from '../lib/time.js'
+import { computeBodyInsights } from '../lib/bodyInsights.js'
 
 // The one and only writer of wearable data.
 //
@@ -39,6 +40,18 @@ const DaySchema = z.object({
   respirationAvg: z.number().min(0).max(60).nullish(),
   steps: z.number().int().min(0).max(200_000).nullish(),
   activeMinutes: z.number().int().min(0).max(1440).nullish(),
+  sedentarySeconds: z.number().int().min(0).max(86_400).nullish(),
+  // Local minutes since midnight (0-1439).
+  sleepStartMin: z.number().int().min(0).max(1439).nullish(),
+  sleepEndMin: z.number().int().min(0).max(1439).nullish(),
+  avgSleepStress: z.number().min(0).max(100).nullish(),
+  awakeCount: z.number().int().min(0).max(200).nullish(),
+  bodyBatteryAtWake: z.number().int().min(0).max(100).nullish(),
+  lowStressSeconds: z.number().int().min(0).max(86_400).nullish(),
+  highStressSeconds: z.number().int().min(0).max(86_400).nullish(),
+  minHeartRate: z.number().int().min(20).max(150).nullish(),
+  maxHeartRate: z.number().int().min(40).max(250).nullish(),
+  avgWakingRespiration: z.number().min(0).max(60).nullish(),
   raw: z.record(z.any()).nullish(),
 })
 
@@ -53,11 +66,29 @@ const ActivitySchema = z.object({
   raw: z.record(z.any()).nullish(),
 })
 
+// One endpoint's untouched response for one day. Capped generously: the
+// largest real payload seen in the survey was ~124 KB (a night of sleep with
+// its movement and stage series).
+const RawSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  domain: z.string().min(1).max(40),
+  payload: z.unknown(),
+})
+
+const ActivityRawSchema = z.object({
+  externalId: z.string().min(1).max(120),
+  domain: z.string().min(1).max(40),
+  payload: z.unknown(),
+})
+
 const IngestSchema = z.object({
   email: z.string().email(),
   source: z.string().min(1).max(40).default('garmin'),
   days: z.array(DaySchema).max(MAX_DAYS).default([]),
   activities: z.array(ActivitySchema).max(MAX_ACTIVITIES).default([]),
+  // Verbatim endpoint responses — see the WearableRaw model for why.
+  raws: z.array(RawSchema).max(2000).default([]),
+  activityRaws: z.array(ActivityRawSchema).max(400).default([]),
   // Set by a collector that failed partway: record it rather than reporting a
   // clean sync. The Settings card surfaces this verbatim.
   error: z.string().max(500).nullish(),
@@ -175,6 +206,40 @@ router.post('/ingest', async (req, res, next) => {
       activityCount += chunk.length
     }
 
+    // Verbatim payloads. Never lets a raw-capture failure lose the curated
+    // day rows that were already written above.
+    let rawCount = 0
+    try {
+      for (let i = 0; i < body.raws.length; i += 25) {
+        const chunk = body.raws.slice(i, i + 25)
+        await prisma.$transaction(chunk.map((r) => {
+          const bytes = JSON.stringify(r.payload ?? null).length
+          const data = { payload: (r.payload ?? {}) as object, bytes, fetchedAt: new Date() }
+          return prisma.wearableRaw.upsert({
+            where: { userId_date_domain_source: { userId: user.id, date: r.date, domain: r.domain, source: body.source } },
+            update: data,
+            create: { userId: user.id, date: r.date, domain: r.domain, source: body.source, ...data },
+          })
+        }))
+        rawCount += chunk.length
+      }
+      for (let i = 0; i < body.activityRaws.length; i += 10) {
+        const chunk = body.activityRaws.slice(i, i + 10)
+        await prisma.$transaction(chunk.map((r) => {
+          const bytes = JSON.stringify(r.payload ?? null).length
+          const data = { userId: user.id, payload: (r.payload ?? {}) as object, bytes, fetchedAt: new Date() }
+          return prisma.wearableActivityRaw.upsert({
+            where: { source_externalId_domain: { source: body.source, externalId: r.externalId, domain: r.domain } },
+            update: data,
+            create: { source: body.source, externalId: r.externalId, domain: r.domain, ...data },
+          })
+        }))
+        rawCount += chunk.length
+      }
+    } catch (e) {
+      console.error('[ingest] raw capture failed', e)
+    }
+
     // Latest date we now hold — where the next incremental sync resumes.
     const latest = body.days.length
       ? body.days.map((d) => d.date).sort().at(-1)!
@@ -192,7 +257,7 @@ router.post('/ingest', async (req, res, next) => {
       },
     })
 
-    res.json({ ok: true, days: dayCount, activities: activityCount })
+    res.json({ ok: true, days: dayCount, activities: activityCount, raws: rawCount })
   } catch (err) {
     next(err)
   }
@@ -232,10 +297,31 @@ router.get('/ingest/state', async (req, res, next) => {
     })
     const held = rows.map((r) => r.date)
 
+    // Dates whose verbatim capture already looks complete. The collector walks
+    // these separately from the curated days: raw capture is ~22 requests a
+    // day against 3, so tying them together would slow the fast one to the
+    // pace of the slow one.
+    const rawRows = await prisma.wearableRaw.groupBy({
+      by: ['date'],
+      where: { userId: user.id, date: { gte: from } },
+      _count: { domain: true },
+    })
+    const RAW_COMPLETE_AT = 12 // most days return ~20 domains; allow for quiet ones
+    const rawHeld = rawRows.filter((r) => r._count.domain >= RAW_COMPLETE_AT).map((r) => r.date)
+
+    // Activities whose detail streams we already hold. Without this the
+    // collector re-downloads a ~300 KB stream per activity on every run.
+    const actRaw = await prisma.wearableActivityRaw.findMany({
+      where: { userId: user.id, domain: 'details' },
+      select: { externalId: true },
+    })
+
     res.json({
       timezone: user.timezone,
       windowFrom: from,
       held,
+      rawHeld,
+      activityRawHeld: actRaw.map((a) => a.externalId),
       firstDate: held[0] ?? null,
       lastDate: held[held.length - 1] ?? null,
     })
@@ -250,6 +336,11 @@ router.use(requireAuth)
 
 const DAY_FIELDS = {
   date: true,
+  sleepStartMin: true,
+  sleepEndMin: true,
+  bodyBatteryAtWake: true,
+  avgSleepStress: true,
+  awakeCount: true,
   sleepMinutes: true,
   deepMinutes: true,
   remMinutes: true,
@@ -355,6 +446,74 @@ router.get('/status', async (req: AuthRequest, res, next) => {
       lastDate: sync?.lastDate ?? null,
       status: sync?.status ?? null,
       error: sync?.error ?? null,
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+// GET /insights — what Garmin has the data for but doesn't tell you.
+//
+// Deliberately independent of habits: the habit-linked analysis is only as
+// good as how long the person has been logging habits, and that is the slow
+// ingredient. These findings need only the wearable history.
+router.get('/insights', async (req: AuthRequest, res, next) => {
+  try {
+    const tz = req.userTimezone ?? 'Pacific/Auckland'
+    res.json(await computeBodyInsights(req.userId!, tz))
+  } catch (err) {
+    next(err)
+  }
+})
+
+// GET /capture — what has actually been captured, and how much of it.
+//
+// The verbatim store is invisible by design: nothing renders it directly. This
+// makes its progress and its cost legible, so "is the backfill still running?"
+// and "how big is this getting?" are answerable without a database client.
+router.get('/capture', async (req: AuthRequest, res, next) => {
+  try {
+    const [byDomain, totals, dayRange, activityRaw] = await Promise.all([
+      prisma.wearableRaw.groupBy({
+        by: ['domain'],
+        where: { userId: req.userId! },
+        _count: { _all: true },
+        _sum: { bytes: true },
+      }),
+      prisma.wearableRaw.aggregate({
+        where: { userId: req.userId! },
+        _count: { _all: true },
+        _sum: { bytes: true },
+      }),
+      Promise.all([
+        prisma.wearableRaw.findFirst({ where: { userId: req.userId! }, select: { date: true }, orderBy: { date: 'asc' } }),
+        prisma.wearableRaw.findFirst({ where: { userId: req.userId! }, select: { date: true }, orderBy: { date: 'desc' } }),
+      ]),
+      prisma.wearableActivityRaw.aggregate({
+        where: { userId: req.userId! },
+        _count: { _all: true },
+        _sum: { bytes: true },
+      }),
+    ])
+
+    // How many distinct days have any capture at all.
+    const distinct = await prisma.wearableRaw.findMany({
+      where: { userId: req.userId! },
+      select: { date: true },
+      distinct: ['date'],
+    })
+
+    res.json({
+      domains: byDomain
+        .map((d) => ({ domain: d.domain, days: d._count._all, bytes: d._sum.bytes ?? 0 }))
+        .sort((a, b) => b.bytes - a.bytes),
+      totalRows: totals._count._all,
+      totalBytes: totals._sum.bytes ?? 0,
+      daysCaptured: distinct.length,
+      firstDate: dayRange[0]?.date ?? null,
+      lastDate: dayRange[1]?.date ?? null,
+      activityRows: activityRaw._count._all,
+      activityBytes: activityRaw._sum.bytes ?? 0,
     })
   } catch (err) {
     next(err)
