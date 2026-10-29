@@ -9,11 +9,16 @@ import Module from 'node:module'
 import { fileURLToPath } from 'node:url'
 
 const stub = fileURLToPath(new URL('./prismaStub.cts', import.meta.url))
+const gemini = fileURLToPath(new URL('./geminiStub.cts', import.meta.url))
 const original = Module._resolveFilename
 Module._resolveFilename = function (request, parent, ...rest) {
-  if (/(^\.\/|\/lib\/)prisma(\.js|\.ts)?$/.test(request) && parent?.filename?.includes('/server/src/')) return stub
+  const fromServer = parent?.filename?.includes('/server/src/')
+  if (/(^\.\/|\/lib\/)prisma(\.js|\.ts)?$/.test(request) && fromServer) return stub
+  // The AI routes talk to a recorder instead of Gemini.
+  if (request === '@google/generative-ai' && fromServer) return gemini
   return original.call(this, request, parent, ...rest)
 }
+process.env.GEMINI_API_KEY ??= 'harness'
 
 // globalThis.setHarnessNow(iso) moves the clock mid-run, so one process can
 // replay a scenario across several days.

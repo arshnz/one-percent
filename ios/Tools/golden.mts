@@ -29,6 +29,8 @@ import checkinsRouter from '../../server/src/routes/checkins.js'
 import automaticityRouter from '../../server/src/routes/automaticity.js'
 import momentumRouter from '../../server/src/routes/momentum.js'
 import compassRouter from '../../server/src/routes/compass.js'
+import aiRouter from '../../server/src/routes/ai.js'
+import { calls as geminiCalls } from './harness/geminiStub.cts'
 import { scoreConcreteness } from '../../client/src/lib/concreteness.js'
 
 declare global {
@@ -565,6 +567,31 @@ for (const o of ops) {
   const result = await runOp(o)
   scenario.push({ ...o, result, habitAfter: o.habit ? habitSnapshot(o.habit) : null, checkinsAfter: o.habit ? null : checkinSnapshot() })
 }
+// --- 3c. The AI prompts the web sends, captured from the routes ------------
+//
+// Taken after the daily-loop scenario and before the design scenario, so the
+// packs carry real reasons, check-ins and a graduated ladder.
+
+const promptGoal = table('goal').find((g) => g.status === 'active')!
+async function capture(path: string, body: any) {
+  geminiCalls.length = 0
+  await callRoute(aiRouter, 'post', path, req({ body }))
+  return geminiCalls[geminiCalls.length - 1]
+}
+const opener = [{ role: 'model', text: 'Hello.' }, { role: 'user', text: 'Ready.' }]
+const prompts = {
+  goalTitle: promptGoal.title,
+  checkin: (await capture('/checkin', { messages: opener, wsId })).system,
+  insights: (await capture('/insights', { wsId })).prompt,
+  compassReality: (await capture('/compass', { stage: 'reality', messages: opener })).system,
+  compassFirstStep: (await capture('/compass', { stage: 'first-step', messages: opener })).system,
+  interviewBuild: (await capture('/blueprint-interview', { messages: opener, kind: 'build' })).system,
+  interviewBreak: (await capture('/blueprint-interview', { messages: opener, kind: 'break', wsId, goalId: promptGoal.id })).system,
+  draftBreak: await capture('/blueprint-draft', { messages: [...opener, { role: 'model', text: 'Why?' }, { role: 'user', text: 'Sleep.' }], kind: 'break' }),
+  coach: (await capture('/coach', { messages: [{ role: 'user', text: 'How do I make it stick?' }], wsId })).system,
+  summary: await capture('/checkin-summary', { messages: [...opener, { role: 'model', text: 'How was it?' }, { role: 'user', text: 'Good.' }] }),
+}
+
 const design = []
 for (const o of designOps) {
   const result = await designOp(o)
@@ -620,6 +647,7 @@ const golden = {
   afterMomentum,
   design,
   concreteness: concreteInputs,
+  prompts,
 }
 
 writeFileSync('ios/OnePercentTests/Fixtures/golden.json', JSON.stringify(golden))

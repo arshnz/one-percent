@@ -283,6 +283,8 @@ struct DailyLoopGoldenTests {
             }
         }
 
+        try expectPrompts(g["prompts"] as! [String: Any], ctx: ctx, now: now, tz: tz)
+
         for (i, step) in (g["design"] as! [[String: Any]]).enumerated() {
             let result = runDesignOp(step, ctx: ctx, now: now)
             let label = "design \(i) \(step["op"]!) \(step["title"] ?? "")"

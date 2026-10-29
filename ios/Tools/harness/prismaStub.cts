@@ -36,6 +36,8 @@ const relations: Record<string, Record<string, [string, string, string, 'one' | 
     goals: ['goal', 'id', 'workstationId', 'many'],
   },
   coachConversation: { messages: ['coachMessage', 'id', 'conversationId', 'many'] },
+  habitMetricLink: { habit: ['habit', 'habitId', 'id', 'one'] },
+  automaticityCheck: { habit: ['habit', 'habitId', 'id', 'one'], phase: ['phase', 'phaseId', 'id', 'one'] },
 }
 
 const compound: Record<string, string[]> = {
@@ -229,6 +231,8 @@ export const prisma: any = new Proxy({}, {
   get(_t, prop: string) {
     if (prop in db) return delegate(prop)
     if (prop === '$disconnect') return async () => {}
+    // Vector search for the coach's book passages: none in the harness.
+    if (prop === '$queryRawUnsafe' || prop === '$queryRaw') return async () => []
     // Interactive transactions run against the same tables — the stub has no
     // concurrency, so "all or nothing" is moot here.
     if (prop === '$transaction') return async (fn: any) => (typeof fn === 'function' ? fn(prisma) : Promise.all(fn))

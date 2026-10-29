@@ -39,17 +39,19 @@ enum Theme {
         return habitPalette[Int(abs(Int64(hash)) % Int64(habitPalette.count))]
     }
 
-    private static func dynamic(_ light: UInt32, _ dark: UInt32) -> Color {
+    // Nonisolated on purpose: SwiftUI resolves dynamic colours on its render
+    // thread, and a main-actor closure there traps at runtime.
+    nonisolated private static func dynamic(_ light: UInt32, _ dark: UInt32) -> Color {
         Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: dark) : UIColor(hex: light) })
     }
 }
 
 extension Color {
-    init(hex: UInt32) { self.init(uiColor: UIColor(hex: hex)) }
+    nonisolated init(hex: UInt32) { self.init(uiColor: UIColor(hex: hex)) }
 }
 
 extension UIColor {
-    convenience init(hex: UInt32) {
+    nonisolated convenience init(hex: UInt32) {
         self.init(
             red: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255,
             blue: CGFloat(hex & 0xFF) / 255, alpha: 1

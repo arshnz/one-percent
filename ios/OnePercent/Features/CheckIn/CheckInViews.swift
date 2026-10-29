@@ -64,6 +64,10 @@ struct CheckInSheet: View {
     @Query private var profiles: [Profile]
 
     @State private var draft = CheckInPack.Draft()
+    @State private var messages: [ChatMessage] = []
+    @State private var saving = false
+    @Query private var habits: [Habit]
+    @Query private var goals: [Goal]
     /// "What got in the way?" sweep picks, keyed habit|date.
     @State private var sweep: [String: (reasons: [String], note: String)] = [:]
     @State private var savedMisses: Set<String> = []
@@ -110,6 +114,17 @@ struct CheckInSheet: View {
                     }
                 }
 
+                Section {
+                    GuidedChatView(messages: $messages, modelName: "Companion", system: {
+                        Prompts.checkinSystemWithPack(Prompts.checkinPack(habits: habits, goals: goals, now: Date(), tz: tz))
+                    }, placeholder: "Reflect honestly...")
+                    .listRowInsets(EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12))
+                } header: {
+                    Text("Talk it through")
+                } footer: {
+                    Text("Optional. A short, warm conversation about your real week — what you say is distilled into two sentences the coach remembers.")
+                }
+
                 Section("Overall, how did the week feel?") {
                     HStack(spacing: 4) {
                         ForEach(1...10, id: \.self) { n in
@@ -154,16 +169,25 @@ struct CheckInSheet: View {
                 Section("Anything else") { TextField("", text: $draft.freeform, axis: .vertical).lineLimit(2...) }
 
                 Section {
-                    Button(pack.existing.map { $0.status != "skipped" } == true ? "Update this week’s check-in" : "Save this week’s check-in") { save() }
+                    Button(saving ? "Saving…" : pack.existing.map { $0.status != "skipped" } == true ? "Update this week’s check-in" : "Save this week’s check-in") { save() }
                         .frame(maxWidth: .infinity)
                         .fontWeight(.semibold)
+                        .disabled(saving)
                 }
             }
             .navigationTitle("Week of \(DateText.monthDay(pack.weekOf))")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
         }
-        .onAppear { if let e = pack.existing { draft = CheckInPack.Draft(e) } }
+        .onAppear {
+            if let e = pack.existing { draft = CheckInPack.Draft(e) }
+            guard messages.isEmpty else { return }
+            let wins = pack.summary.filter { $0.scheduled > 0 }
+            let opener = wins.isEmpty
+                ? "Let's look back on your week together — an honest, no-guilt review."
+                : "You showed up \(wins.reduce(0) { $0 + $1.hits }) times across \(wins.count) \(wins.count == 1 ? "habit" : "habits") this week. Let's look back together — no scores, just an honest look."
+            messages = [ChatMessage(role: "model", text: "\(opener) First: overall, how did the week feel, roughly 1 to 10?")]
+        }
     }
 
     private func row(_ id: String) -> (reasons: [String], note: String) { sweep[id] ?? ([], "") }
@@ -196,10 +220,25 @@ struct CheckInSheet: View {
     }
 
     private func save() {
-        do {
-            try CheckInPack.save(weekOf: pack.weekOf, draft, existing: checkIns, ctx: ctx)
-            toasts.show("Check-in saved. See you next week.")
-            onSaved()
-        } catch { toasts.error("Could not save your check-in.") }
+        saving = true
+        Task {
+            var d = draft
+            // Distil the conversation to two sentences the coach will remember.
+            if messages.contains(where: { $0.role == "user" }) {
+                d.aiSummary = try? await AIEngine.respond(
+                    system: Prompts.checkinSummarySystem,
+                    prompt: AIEngine.clip(Prompts.transcript(messages, model: "COMPANION"), to: AIEngine.promptBudget)
+                ).trimmed.nonEmpty ?? d.aiSummary
+            }
+            do {
+                try CheckInPack.save(weekOf: pack.weekOf, d, existing: checkIns, ctx: ctx)
+                toasts.show("Check-in saved. See you next week.")
+                onSaved()
+                // Refresh the Momentum insights in the background — a bonus, so
+                // a failure here never blocks or toasts.
+                Task { try? await Insights.regenerate(ctx) }
+            } catch { toasts.error("Could not save your check-in.") }
+            saving = false
+        }
     }
 }

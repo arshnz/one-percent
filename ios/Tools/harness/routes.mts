@@ -14,9 +14,14 @@ export async function callRoute(
   const handler = layer.route.stack[layer.route.stack.length - 1].handle
   return new Promise((resolve, reject) => {
     let status = 200
+    let streamed = ''
     const res = {
       status(s: number) { status = s; return res },
       json(body: any) { resolve({ status, body: JSON.parse(JSON.stringify(body)) }) },
+      // Server-sent events, for the streaming AI routes.
+      setHeader() {}, flushHeaders() {},
+      write(chunk: string) { streamed += chunk },
+      end() { resolve({ status, body: streamed }) },
     }
     handler({ params: {}, query: {}, body: {}, ...req }, res, (err: any) => (err ? reject(err) : resolve({ status, body: null })))
   })

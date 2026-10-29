@@ -48,6 +48,17 @@ The coverage today:
 
 The fixtures hold personal data, so they're gitignored, and the tests skip themselves when the fixtures are missing.
 
+## AI
+
+There's no server and no API key. Every AI surface runs on Apple's models through Foundation Models: the coach, the blueprint interview and draft, the Compass helper and "pull into the form", the check-in companion and summary, and Momentum insights.
+
+- **On-device** (default) needs an iPhone 15 Pro or newer with Apple Intelligence on. Its context is small (about 4k tokens), so packs and book passages are trimmed for it (`AIEngine.promptBudget`).
+- **Private Cloud Compute** (iOS 27) is much stronger but needs Apple's managed entitlement `com.apple.developer.private-cloud-compute`, which you request at https://developer.apple.com/contact/request/private-cloud-compute/. Without it the model reports itself available and then traps on first use. Once it's granted, add the entitlement to the target and set `OPUsePrivateCloudCompute: true` in `project.yml`.
+- **The Simulator can't run either model.** Test the AI on a device. In the Simulator the app says so and offers hand-off.
+- **Hand-off**, on every surface, copies or shares the full prompt (role, your context, the conversation) for Claude or any assistant. You can then paste the answer back in: a chat reply, blueprint JSON, Compass JSON, or insights.
+
+The prompts and data packs are word-for-word ports of `routes/ai.ts`. The golden harness swaps `@google/generative-ai` for a recorder (`harness/geminiStub.cts`) and checks the Swift prompts against what the web actually sent. The coach's book retrieval moved from Gemini embeddings plus pgvector to Apple's on-device sentence embeddings, computed in the background on first launch.
+
 ## Known quirks carried over on purpose, and the one fixed
 
 - **Compound curve, creation day.** The curve cuts `createdAt`, `pausedAt` and `archivedAt` to the *UTC* date, while everything else uses the local date. In NZ that means a habit created before 1pm counts from the previous day on the curve only. This is kept identical so imported history reads the same; fix it in both places at once, or not at all.

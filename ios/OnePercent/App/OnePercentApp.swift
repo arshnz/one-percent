@@ -16,6 +16,8 @@ struct OnePercentApp: App {
             fatalError("Couldn't open the store: \(error)")
         }
         DevImport.runIfRequested(into: container.mainContext)
+        AIFeatures.register()
+        BookIndex.warm(container)
     }
 
     var body: some Scene {

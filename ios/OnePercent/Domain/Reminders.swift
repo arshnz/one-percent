@@ -131,6 +131,6 @@ enum Reminders {
 }
 
 extension String {
-    var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
-    var nonEmpty: String? { isEmpty ? nil : self }
+    nonisolated var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
+    nonisolated var nonEmpty: String? { isEmpty ? nil : self }
 }
