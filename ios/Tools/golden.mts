@@ -32,6 +32,9 @@ import compassRouter from '../../server/src/routes/compass.js'
 import aiRouter from '../../server/src/routes/ai.js'
 import { calls as geminiCalls } from './harness/geminiStub.cts'
 import { scoreConcreteness } from '../../client/src/lib/concreteness.js'
+import { computeHabitEffects, computeMissPredictors } from '../../server/src/lib/habitEffect.js'
+import { computeBodyInsights } from '../../server/src/lib/bodyInsights.js'
+import { permutationTest, benjaminiHochberg, circularStats, circularSdMinutes, median } from '../../server/src/lib/stats.js'
 
 declare global {
   // eslint-disable-next-line no-var
@@ -94,6 +97,17 @@ ws.habits.push(
     ],
   }),
 )
+
+// Body links on real habits, so the effect analysis and the insights' wearable
+// block have something to test.
+const meditation = ws.habits.find((h: any) => /meditation/i.test(h.title) && !h.archivedAt && !h.pausedAt)
+const cricket = ws.habits.find((h: any) => /cricket/i.test(h.title) && !h.archivedAt)
+const link = (h: any, metric: string, lagDays: number, i: number) => ({
+  id: `link-${h.id}-${metric}`, habitId: h.id, metric, direction: metric === 'restingHr' || metric === 'stressAvg' ? 'lower_better' : 'higher_better',
+  lagDays, createdAt: `2026-09-01T00:00:0${i}.000Z`,
+})
+if (meditation) meditation.metricLinks = [link(meditation, 'restingHr', 1, 1), link(meditation, 'sleepMinutes', 0, 2), link(meditation, 'hrvNight', 1, 3)]
+if (cricket) cricket.metricLinks = [link(cricket, 'bodyBatteryHigh', 1, 4), link(cricket, 'stressAvg', 0, 5)]
 
 const habits = ws.habits
 const { userId, wsId } = loadExport(ex)
@@ -273,6 +287,38 @@ async function momentumAt(now: string) {
 const momentumViews = []
 for (let i = 77; i >= 0; i -= 7) momentumViews.push(await momentumAt(`${shift(TODAY, -i)}T03:00:00.000Z`))
 momentumViews.push(await momentumAt(`${TODAY}T11:30:00.000Z`))
+
+// --- 2c. The body: stats, insights and habit effects --------------------------
+
+seed = 7
+const statsCases = Array.from({ length: 40 }, (_, i) => {
+  const n1 = 8 + Math.floor(rand() * 30), n2 = 8 + Math.floor(rand() * 30)
+  const shiftBy = i % 3 === 0 ? 0 : rand() * 6
+  const a = Array.from({ length: n1 }, () => Math.round((50 + rand() * 20 + shiftBy) * 10) / 10)
+  const b = Array.from({ length: n2 }, () => Math.round((50 + rand() * 20) * 10) / 10)
+  const iterations = i % 2 ? 2500 : 10000
+  return { a, b, seed: 12345 + i, iterations, p: permutationTest(a, b, 12345 + i, iterations), medA: median(a), medB: median(b) }
+})
+const bh = { p: statsCases.map((c) => c.p), q: benjaminiHochberg(statsCases.map((c) => c.p)) }
+const circ = [[0.95, 0.97, 0.02, 0.01], [0.3, 0.31, 0.29, 0.32, 0.5], [0.1, 0.6, 0.35, 0.85]].map((f) => {
+  const c = circularStats(f)!
+  return { f, mean: c.meanFraction, resultant: c.resultant, sd: circularSdMinutes(c.resultant) }
+})
+
+async function bodyAt(now: string) {
+  globalThis.setHarnessNow(now)
+  const effects: any = {}
+  for (const h of [meditation, cricket].filter(Boolean)) {
+    effects[h.title] = await computeHabitEffects(h.id, userId, h.metricLinks.map((l: any) => ({ metric: l.metric, lagDays: l.lagDays })), tz)
+  }
+  return {
+    now,
+    insights: await computeBodyInsights(userId, tz),
+    predictors: await computeMissPredictors(wsId, userId, tz),
+    effects,
+  }
+}
+const body = [await bodyAt('2026-09-20T03:00:00.000Z'), await bodyAt(NOW)]
 
 // --- 3. Scripted writes through the real routes -----------------------------
 
@@ -648,6 +694,8 @@ const golden = {
   design,
   concreteness: concreteInputs,
   prompts,
+  stats: { cases: statsCases, bh, circ },
+  body,
 }
 
 writeFileSync('ios/OnePercentTests/Fixtures/golden.json', JSON.stringify(golden))

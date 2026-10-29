@@ -48,8 +48,11 @@ func expectPrompts(_ p: [String: Any], ctx: ModelContext, now: Date, tz: String)
     }
 
     same("check-in", Prompts.checkinSystemWithPack(Prompts.checkinPack(habits: habits, goals: goals, now: now, tz: tz)), p["checkin"])
-    same("insights", Prompts.insightsPrompt(Prompts.insightsPack(habits: habits, checkIns: checkIns, goals: goals, now: now, tz: tz, wearable: "")),
-         withoutWearable(p["insights"] as? String ?? ""))
+    let rows = try ctx.fetch(FetchDescriptor<BodyDay>())
+    let (snaps, links, samples) = BodyAI.inputs(habits, rows: rows, tz: tz)
+    let wearable = BodyAI.wearableBlock(habits: snaps, links: links, days: samples, now: now, tz: tz)
+    same("insights", Prompts.insightsPrompt(Prompts.insightsPack(habits: habits, checkIns: checkIns, goals: goals, now: now, tz: tz, wearable: wearable)),
+         p["insights"])
     same("compass A", Prompts.compassSystem(stage: "reality", personalContext: pc, assessment: assessment), p["compassReality"])
     same("compass B", Prompts.compassSystem(stage: "first-step", personalContext: pc, assessment: assessment), p["compassFirstStep"])
     same("interview build", Prompts.blueprintInterviewSystem(kind: "build", personalContext: pc, assessment: assessment, goalTitle: nil), p["interviewBuild"])

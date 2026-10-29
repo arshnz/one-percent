@@ -243,7 +243,7 @@ struct CompoundCurveCard: View {
     }
 }
 
-extension DateText {
+nonisolated extension DateText {
     /// "29 Oct 2026"
     static func dayMonthYear(_ iso: String) -> String { formatted(iso, "d MMM yyyy") }
     /// "October 2026"

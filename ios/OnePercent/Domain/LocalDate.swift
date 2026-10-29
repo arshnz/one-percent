@@ -7,7 +7,7 @@ import Foundation
 // Arithmetic on a date string is done in UTC: a calendar date has no time zone,
 // and UTC has no DST, so "add one day" can never skip or repeat. A time zone
 // only enters when turning an instant (a Date) into a local date.
-enum LocalDate {
+nonisolated enum LocalDate {
     private static let utc: Calendar = {
         var c = Calendar(identifier: .gregorian)
         c.timeZone = TimeZone(identifier: "UTC")!

@@ -19,7 +19,7 @@ import Foundation
 // So nothing turns red while you still have slack, and a week that ends short
 // shows exactly the shortfall — on the days you ran out of runway.
 
-enum Schedule: Equatable {
+nonisolated enum Schedule: Equatable, Sendable {
     case days([Int])
     case weekly(quota: Int)
 
@@ -42,12 +42,12 @@ enum Schedule: Equatable {
         self = .days(days.isEmpty ? Schedule.allDays : days)
     }
 
-    init(_ h: Habit) {
+    @MainActor init(_ h: Habit) {
         self.init(scheduleType: h.scheduleType, scheduleDays: h.scheduleDays, timesPerWeek: h.timesPerWeek)
     }
 }
 
-struct ResolvedDay: Equatable {
+nonisolated struct ResolvedDay: Equatable {
     let date: String
     let weekday: Int
     /// True when this day asks something of the habit — the flag the whole app reads.
@@ -55,7 +55,7 @@ struct ResolvedDay: Equatable {
 }
 
 /// Bounds outside which a habit can't be scheduled at all. All local "YYYY-MM-DD".
-struct ScheduleBounds {
+nonisolated struct ScheduleBounds: Sendable {
     var createdOn: String
     /// That day and after are rest.
     var pausedOn: String?
@@ -68,7 +68,7 @@ struct ScheduleBounds {
         self.archivedOn = archivedOn
     }
 
-    init(_ h: Habit, tz: String) {
+    @MainActor init(_ h: Habit, tz: String) {
         self.init(
             createdOn: LocalDate.of(h.createdAt, tz: tz),
             pausedOn: h.pausedAt.map { LocalDate.of($0, tz: tz) },
@@ -84,7 +84,7 @@ struct ScheduleBounds {
     }
 }
 
-struct WeekProgress: Equatable {
+nonisolated struct WeekProgress: Equatable {
     let quota: Int
     let hits: Int
     let remaining: Int
@@ -94,7 +94,7 @@ struct WeekProgress: Equatable {
     let obligatedToday: Bool
 }
 
-enum ScheduleResolver {
+nonisolated enum ScheduleResolver {
     /// The seven dates (Monday first) of the week containing `iso`.
     static func weekDates(of iso: String) -> [String] {
         let monday = LocalDate.mondayOf(iso)

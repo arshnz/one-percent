@@ -75,7 +75,7 @@ struct WeekStripView: View {
     }
 }
 
-enum DateText {
+nonisolated enum DateText {
     private static func date(_ iso: String) -> Date {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")

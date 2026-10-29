@@ -273,7 +273,10 @@ export function loadExport(ex: any) {
       db.coachConversation.push(revive(chat))
       for (const m of messages) db.coachMessage.push(revive(m))
     }
-    for (const { phases, logs, checks, metricLinks, ...h } of habits) {
+    // Creation order, as Postgres would hand them back — some analyses are
+    // order-sensitive (a permutation test's shuffle depends on input order).
+    const ordered = [...habits].sort((a: any, b: any) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0))
+    for (const { phases, logs, checks, metricLinks, ...h } of ordered) {
       db.habit.push(revive(h))
       for (const p of phases) db.phase.push(revive(p))
       for (const l of logs) db.habitLog.push(revive(l))

@@ -47,7 +47,9 @@ struct MainTabView: View {
             Tab("Momentum", systemImage: "chart.line.uptrend.xyaxis", value: AppRouter.TabKey.momentum) {
                 MomentumView(
                     onEditHabit: { router.architect = ArchitectSeed(habit: $0) },
-                    onAddHabit: { router.architect = ArchitectSeed() }
+                    onAddHabit: { router.architect = ArchitectSeed() },
+                    habitFooter: HabitFooterSlot.factory,
+                    measuredExtra: AnyView(WearableSeriesView())
                 )
             }
             BodyTabSlot.make()
