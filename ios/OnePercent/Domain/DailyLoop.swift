@@ -91,7 +91,7 @@ enum DailyLoop {
     static func vote(
         _ h: Habit, status: String? = nil, quantity: Int? = nil, goldilocks: String? = nil,
         date: String? = nil, missReasons: [String]? = nil, missNote: String?? = nil,
-        today: String, ctx: ModelContext
+        today: String, now: Date = Date(), ctx: ModelContext
     ) throws -> VoteResult {
         let day = date ?? today
         if date != nil && !inEditWindow(day, today: today) { throw LoopError.outsideWindow }
@@ -113,6 +113,8 @@ enum DailyLoop {
             entry.status = finalStatus
         } else {
             entry = HabitLog(date: day, status: finalStatus)
+            // When the rep landed feeds "same time of day" (anchoring).
+            entry.createdAt = now
             ctx.insert(entry)
             entry.habit = h
             entry.missReasons = "[]"
@@ -140,13 +142,14 @@ enum DailyLoop {
     /// "What got in the way" for a day, without touching the rest of the log.
     /// A day with no log at all (a silent miss explained later) gets a `miss`
     /// row — misses never count as votes, so phases and rhythm are unaffected.
-    static func recordReason(_ h: Habit, date: String, reasons: [String], note: String?, today: String, ctx: ModelContext) throws {
+    static func recordReason(_ h: Habit, date: String, reasons: [String], note: String?, today: String, now: Date = Date(), ctx: ModelContext) throws {
         guard date <= today, date >= LocalDate.shift(today, by: -7) else { throw LoopError.outsideWindow }
         let entry: HabitLog
         if let existing = log(on: h, date: date) {
             entry = existing
         } else {
             entry = HabitLog(date: date, status: "miss")
+            entry.createdAt = now
             ctx.insert(entry)
             entry.habit = h
             entry.phase = h.sortedPhases.first { $0.status == "active" }

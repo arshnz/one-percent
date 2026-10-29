@@ -27,6 +27,7 @@ import habitsRouter from '../../server/src/routes/habits.js'
 import logsRouter from '../../server/src/routes/logs.js'
 import checkinsRouter from '../../server/src/routes/checkins.js'
 import automaticityRouter from '../../server/src/routes/automaticity.js'
+import momentumRouter from '../../server/src/routes/momentum.js'
 
 declare global {
   // eslint-disable-next-line no-var
@@ -219,6 +220,54 @@ for (let i = 70; i >= 0; i--) {
 const views = []
 for (const at of instants) views.push(await snapshotViews(at))
 
+// --- 2b. GET /momentum, plus the client's curve maths on its output ----------
+
+function momentumShape(m: any) {
+  const series = progressSeries([...m.trajectory, ...m.archived])
+  const weekly = activeDaysPerWeek(m.trajectory)
+  const fan = projectFan(series.progressDays, m.consistency.rhythm, weekly, 26)
+  return {
+    totalVotes: m.totalVotes,
+    totalRecoveries: m.totalRecoveries,
+    consistency: m.consistency,
+    automaticity: m.automaticity.map((a: any) => ({ uid: a.habitId, mean: a.mean, passed: a.passed })),
+    weeklyRatings: m.weeklyRatings,
+    ratio: m.ratio,
+    contributions: m.contributions,
+    habitCount: m.habitCount,
+    topObstacle: m.topObstacle,
+    trajectory: m.trajectory.map((t: any) => ({
+      uid: t.habitId,
+      consistency: t.consistency,
+      contributions: t.contributions.map((c: any) => ({
+        date: c.date, count: c.count, wasSavedMiss: c.wasSavedMiss, status: c.status ?? null,
+        scheduled: c.scheduled, missReasons: c.missReasons ?? null,
+      })),
+      topObstacles: t.topObstacles,
+      missPattern: t.missPattern,
+      setbackObstacles: t.setbackObstacles,
+      phases: t.phases.map((p: any) => ({ n: p.phaseNumber, status: p.status, targetCount: p.targetCount, graduated: !!p.graduatedAt })),
+    })),
+    archivedCount: m.archived.length,
+    curve: {
+      progressDays: series.progressDays, activeDays: series.activeDays, length: series.actual.length,
+      first: series.actual[0]?.date ?? null, last: series.actual.at(-1)?.date ?? null,
+      lastValue: series.actual.at(-1)?.value ?? null, lastCeiling: series.ceiling.at(-1)?.value ?? null,
+      weeklyActive: weekly, paceEnd: fan.paceEnd, oneMoreEnd: fan.oneMoreEnd,
+    },
+  }
+}
+
+async function momentumAt(now: string) {
+  globalThis.setHarnessNow(now)
+  const r = await callRoute(momentumRouter, 'get', '/', req())
+  return { now, momentum: momentumShape(r.body) }
+}
+
+const momentumViews = []
+for (let i = 77; i >= 0; i -= 7) momentumViews.push(await momentumAt(`${shift(TODAY, -i)}T03:00:00.000Z`))
+momentumViews.push(await momentumAt(`${TODAY}T11:30:00.000Z`))
+
 // --- 3. Scripted writes through the real routes -----------------------------
 
 function habitSnapshot(habitId: string) {
@@ -334,6 +383,7 @@ for (const o of ops) {
   scenario.push({ ...o, result, habitAfter: o.habit ? habitSnapshot(o.habit) : null, checkinsAfter: o.habit ? null : checkinSnapshot() })
 }
 const afterViews = [await snapshotViews(NOW), await snapshotViews('2026-10-30T03:00:00.000Z')]
+const afterMomentum = [await momentumAt(NOW)]
 
 // --- write -------------------------------------------------------------------
 
@@ -362,6 +412,8 @@ const golden = {
   views,
   scenario,
   afterViews,
+  momentumViews,
+  afterMomentum,
 }
 
 writeFileSync('ios/OnePercentTests/Fixtures/golden.json', JSON.stringify(golden))

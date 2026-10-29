@@ -26,6 +26,9 @@ struct MainTabView: View {
             Tab("Today", systemImage: "sun.max") {
                 LaunchpadView()
             }
+            Tab("Momentum", systemImage: "chart.line.uptrend.xyaxis") {
+                MomentumView()
+            }
         }
     }
 }
