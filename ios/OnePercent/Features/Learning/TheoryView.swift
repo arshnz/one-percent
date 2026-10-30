@@ -20,10 +20,10 @@ struct TheoryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Label("THEORY", systemImage: "book").font(.eyebrow).tracking(1.4).foregroundStyle(Theme.faint)
-                Text("The science of habit").font(.system(size: 26, weight: .semibold)).tracking(-0.5).foregroundStyle(Theme.ink)
+                Label(caps("Theory"), systemImage: "book").font(.eyebrow).capsTracking(1.4).foregroundStyle(Theme.faint)
+                Text("The science of habit").font(.ui(26, weight: .semibold)).tracking(-0.5).foregroundStyle(Theme.ink)
                 Text("A quick refresher on the ideas behind behaviour change — the foundation everything else in this app is built on. Skim it whenever you need to reset your thinking.")
-                    .font(.system(size: 14)).foregroundStyle(Theme.ink2)
+                    .font(.ui(14)).foregroundStyle(Theme.ink2)
             }
             card("Compounding", icon: "chart.line.uptrend.xyaxis", title: "1 percent better every day",
                  text: "Success is the product of daily habits, not once-in-a-lifetime transformations. A single 1% improvement is barely noticeable today — but repeated daily it compounds into something huge. Focus on your current trajectory, not your current results.",
@@ -53,12 +53,12 @@ struct TheoryView: View {
                     ForEach(Array(Self.loop.enumerated()), id: \.offset) { i, s in
                         VStack(alignment: .leading, spacing: 4) {
                             numbered(i + 1, s.0, bold: true)
-                            Text(s.1).font(.system(size: 13)).foregroundStyle(Theme.ink2)
+                            Text(s.1).font(.ui(13)).foregroundStyle(Theme.ink2)
                         }
                         .padding(12).frame(maxWidth: .infinity, alignment: .leading).background(Theme.bg, in: RoundedRectangle(cornerRadius: 12))
                     }
                     Text("Cue → craving → response → reward. The cue notices the reward, the craving wants it, the response obtains it, and the reward teaches your brain to do it again.")
-                        .font(.system(size: 13)).foregroundStyle(Theme.ink2)
+                        .font(.ui(13)).foregroundStyle(Theme.ink2)
                 }
             }
             card("The playbook", icon: "scalemass", title: "The Four Laws of Behavior Change",
@@ -68,7 +68,7 @@ struct TheoryView: View {
                     GridRow {
                         Text("Step"); Text("Build a good habit"); Text("Break a bad habit")
                     }
-                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(Theme.faint)
+                    .font(.ui(11, weight: .semibold)).foregroundStyle(Theme.faint)
                     Divider()
                     ForEach(Self.laws, id: \.0) { n, step, build, brk in
                         GridRow {
@@ -76,28 +76,28 @@ struct TheoryView: View {
                             Text(build)
                             Text(brk).foregroundStyle(Theme.ink2)
                         }
-                        .font(.system(size: 13))
+                        .font(.ui(13))
                     }
                 }
                 Text("This is the same build/break framing your habits use — good habits lean on the laws, habits you’re quitting lean on their inverse.")
-                    .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    .font(.ui(12)).foregroundStyle(Theme.faint)
             }
         }
     }
 
     private func numbered(_ n: Int, _ text: String, bold: Bool = false) -> some View {
         HStack(spacing: 10) {
-            Text("\(n)").font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.accent)
+            Text("\(n)").font(.ui(12, weight: .bold)).foregroundStyle(Theme.accent)
                 .frame(width: 24, height: 24).background(Theme.accent.opacity(0.15), in: Circle())
-            Text(text).font(.system(size: 14, weight: bold ? .semibold : .regular)).foregroundStyle(Theme.ink)
+            Text(text).font(.ui(14, weight: bold ? .semibold : .regular)).foregroundStyle(Theme.ink)
         }
     }
 
     private func card<Extra: View>(_ eyebrow: String, icon: String, title: String, text: String, quote: String?, @ViewBuilder extra: () -> Extra) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label(eyebrow.uppercased(), systemImage: icon).font(.system(size: 11, weight: .semibold)).tracking(1).foregroundStyle(Theme.faint)
+            Label(caps(eyebrow), systemImage: icon).font(.ui(11, weight: .semibold)).capsTracking(1).foregroundStyle(Theme.faint)
             Text(title).font(.serif(21)).foregroundStyle(Theme.ink)
-            Text(text).font(.system(size: 14)).foregroundStyle(Theme.ink2)
+            Text(text).font(.ui(14)).foregroundStyle(Theme.ink2)
             extra()
             if let quote {
                 HStack(spacing: 12) {
@@ -133,9 +133,9 @@ private struct CompoundingSketch: View {
             }
             ctx.stroke(up, with: .color(Theme.accent), style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
             ctx.stroke(down, with: .color(Theme.ink2), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-            ctx.draw(Text("1% IMPROVEMENT").font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.faint), at: CGPoint(x: x0 + 6, y: y0 - 10), anchor: .leading)
-            ctx.draw(Text("1% DECLINE").font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.faint), at: CGPoint(x: right - 4, y: bottom - 16), anchor: .trailing)
-            ctx.draw(Text("RESULTS").font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.faint), at: CGPoint(x: x0 + 6, y: top + 4), anchor: .leading)
+            ctx.draw(Text("1% IMPROVEMENT").font(.ui(9, weight: .semibold)).foregroundStyle(Theme.faint), at: CGPoint(x: x0 + 6, y: y0 - 10), anchor: .leading)
+            ctx.draw(Text("1% DECLINE").font(.ui(9, weight: .semibold)).foregroundStyle(Theme.faint), at: CGPoint(x: right - 4, y: bottom - 16), anchor: .trailing)
+            ctx.draw(Text("RESULTS").font(.ui(9, weight: .semibold)).foregroundStyle(Theme.faint), at: CGPoint(x: x0 + 6, y: top + 4), anchor: .leading)
         }
         .accessibilityLabel("1 percent improvement compounds upward over time while 1 percent decline compounds downward")
     }
@@ -164,7 +164,7 @@ private struct PlateauSketch: View {
                 ("VALLEY OF DISAPPOINTMENT", CGPoint(x: x0 + 16, y: y0 + 16)),
                 ("TIME", CGPoint(x: right - 26, y: y0 + 16)),
             ] {
-                ctx.draw(Text(s).font(.system(size: 9, weight: .semibold)).foregroundStyle(Theme.faint), at: p, anchor: .leading)
+                ctx.draw(Text(s).font(.ui(9, weight: .semibold)).foregroundStyle(Theme.faint), at: p, anchor: .leading)
             }
         }
         .accessibilityLabel("Expected progress is a straight line; actual results dip into the Valley of Disappointment before breaking upward")

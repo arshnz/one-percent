@@ -56,7 +56,7 @@ struct ArchitectView: View {
                     hints
                     if atCap {
                         Text("You’re already running 6 habits — that’s the ceiling, and one at a time sticks best. Pause or archive one before engineering another.")
-                            .font(.system(size: 14)).foregroundStyle(Theme.ink)
+                            .font(.ui(14)).foregroundStyle(Theme.ink)
                             .padding(14).background(Theme.amber.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
                     }
                     if editing != nil { editActions }
@@ -101,11 +101,11 @@ struct ArchitectView: View {
 
     private var intro: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Label("THE ARCHITECT", systemImage: "hammer").font(.eyebrow).tracking(1.4).foregroundStyle(Theme.faint)
+            Label(caps("The Architect"), systemImage: "hammer").font(.eyebrow).capsTracking(1.4).foregroundStyle(Theme.faint)
             Text(editing != nil ? "Refine the blueprint. Changes apply to your current phase."
                  : breaking ? "Design the bad habit out — make it invisible, unattractive, difficult, and unsatisfying."
                  : "Turn an emotional spark into a rigid behavioural rule. Ambiguity is the enemy.")
-                .font(.system(size: 14)).foregroundStyle(Theme.ink2)
+                .font(.ui(14)).foregroundStyle(Theme.ink2)
         }
     }
 
@@ -117,12 +117,12 @@ struct ArchitectView: View {
             }
             if breaking {
                 HStack {
-                    Text("How will you beat it?").font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.ink2)
+                    Text("How will you beat it?").font(.ui(13, weight: .medium)).foregroundStyle(Theme.ink2)
                     Picker("", selection: $d.breakMode) {
                         Text("Quit entirely").tag("abstain")
                         Text("Taper down").tag("taper")
                     }
-                    .pickerStyle(.segmented)
+                    .pickerStyle(.segmented).labelsHidden()
                 }
             }
         }
@@ -136,8 +136,8 @@ struct ArchitectView: View {
             HStack(spacing: 10) {
                 Image(systemName: icon)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(label).font(.system(size: 14, weight: .semibold))
-                    Text(sub).font(.system(size: 12)).opacity(0.8)
+                    Text(label).font(.ui(14, weight: .semibold))
+                    Text(sub).font(.ui(12)).opacity(0.8)
                 }
                 Spacer(minLength: 0)
             }
@@ -163,11 +163,11 @@ struct ArchitectView: View {
                     .tint(Theme.ink)
                 }
                 if d.goal == nil {
-                    Text("Habits stick better when they serve something bigger — consider linking this to a goal.").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    Text("Habits stick better when they serve something bigger — consider linking this to a goal.").font(.ui(12)).foregroundStyle(Theme.faint)
                 }
             } else {
                 Text("No goals yet. The Compass helps you name where you’re heading, so every habit serves something bigger.")
-                    .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    .font(.ui(12)).foregroundStyle(Theme.faint)
                     .padding(10).frame(maxWidth: .infinity, alignment: .leading)
                     .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.line, style: StrokeStyle(lineWidth: 1, dash: [4, 3])))
             }
@@ -178,11 +178,11 @@ struct ArchitectView: View {
             HStack {
                 PhotosPicker(selection: $photo, matching: .images) {
                     Label(d.whyImageData == nil ? "Add a why image (optional)" : "Change the image", systemImage: "photo")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.ui(13, weight: .medium))
                 }
                 Spacer()
                 if d.whyImageData != nil {
-                    Button("Remove", role: .destructive) { d.whyImageData = nil }.font(.system(size: 13))
+                    Button("Remove", role: .destructive) { d.whyImageData = nil }.font(.ui(13))
                 }
             }
             if let data = d.whyImageData, let img = PlatformImage.image(data) {
@@ -191,10 +191,10 @@ struct ArchitectView: View {
             Divider()
             Toggle(isOn: $d.systemFocusConfirmed) {
                 VStack(alignment: .leading, spacing: 2) {
-                    (Text("I’m focusing on a ") + Text("system, not a goal").fontWeight(.medium) + Text(".")).font(.system(size: 14))
+                    (Text("I’m focusing on a ") + Text("system, not a goal").fontWeight(.medium) + Text(".")).font(.ui(14))
                     Text(breaking ? "Quitting is the goal; the daily system — invisible, difficult, unsatisfying — is what actually gets you free."
                          : "The goal sets the direction; the daily system is what actually gets you there.")
-                        .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                        .font(.ui(12)).foregroundStyle(Theme.faint)
                 }
             }
             .toggleStyle(CheckboxStyle())
@@ -205,7 +205,7 @@ struct ArchitectView: View {
         HStack(spacing: 10) {
             Eyebrow("The system", color: Theme.ink2)
             Theme.line.frame(height: 1)
-            Text("Cue → Craving → Response → Reward").font(.system(size: 11)).foregroundStyle(Theme.faint)
+            Text("Cue → Craving → Response → Reward").font(.ui(11)).foregroundStyle(Theme.faint)
         }
     }
 
@@ -217,13 +217,13 @@ struct ArchitectView: View {
                 if breaking {
                     Field("The trigger to remove — make it invisible") { TextField("My phone within reach in bed", text: $d.avoidTrigger, axis: .vertical) }
                 }
-                Text(breaking ? "When does the urge usually strike?" : "What triggers it?").font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.ink2)
+                Text(breaking ? "When does the urge usually strike?" : "What triggers it?").font(.ui(12, weight: .medium)).foregroundStyle(Theme.ink2)
                 Picker("Cue", selection: $d.cueType) {
                     Label("After a habit", systemImage: "repeat").tag("habit_stack")
                     Label("At a time", systemImage: "clock").tag("time")
                     Label("At a place", systemImage: "mappin").tag("location")
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.segmented).labelsHidden()
                 VStack(alignment: .leading, spacing: 8) {
                     switch d.cueType {
                     case "time":
@@ -242,10 +242,10 @@ struct ArchitectView: View {
                 }
                 Text(breaking ? "When the urge hits, run the replacement instead of reaching for the habit."
                      : "The gateway must take under two minutes. This is your permanent fail-safe — it never scales.")
-                    .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    .font(.ui(12)).foregroundStyle(Theme.faint)
                 if !breaking && !d.failSafeAction.trimmed.isEmpty && !Concreteness.failSafeIsTiny(d.failSafeAction) {
                     Text("That gateway looks too big. Shrink it to one tiny action you could do in under two minutes (e.g. “put on my running shoes”, not a whole workout).")
-                        .font(.system(size: 12)).foregroundStyle(Theme.amber)
+                        .font(.ui(12)).foregroundStyle(Theme.amber)
                 }
             }
             scheduleCard
@@ -259,13 +259,13 @@ struct ArchitectView: View {
                 Text("Specific days").tag("days")
                 Text("Times per week").tag("weekly")
             }
-            .pickerStyle(.segmented)
+            .pickerStyle(.segmented).labelsHidden()
             if d.scheduleType == "days" {
                 HStack(spacing: 6) {
                     ForEach(0..<7, id: \.self) { i in
                         let on = d.days.contains(i)
                         Button { if on { d.days.removeAll { $0 == i } } else { d.days = (d.days + [i]).sorted() } } label: {
-                            Text(["S", "M", "T", "W", "T", "F", "S"][i]).font(.system(size: 14, weight: .medium))
+                            Text(["S", "M", "T", "W", "T", "F", "S"][i]).font(.ui(14, weight: .medium))
                                 .frame(width: 38, height: 38)
                                 .foregroundStyle(on ? Theme.buttonText : Theme.faint)
                                 .background(on ? Theme.button : Theme.panel, in: Circle())
@@ -278,7 +278,7 @@ struct ArchitectView: View {
                 HStack(spacing: 6) {
                     ForEach(1...6, id: \.self) { n in
                         Button { d.timesPerWeek = n } label: {
-                            Text("\(n)").font(.system(size: 14, weight: .medium)).frame(width: 38, height: 38)
+                            Text("\(n)").font(.ui(14, weight: .medium)).frame(width: 38, height: 38)
                                 .foregroundStyle(d.timesPerWeek == n ? Theme.buttonText : Theme.faint)
                                 .background(d.timesPerWeek == n ? Theme.button : Theme.panel, in: Circle())
                         }
@@ -286,27 +286,27 @@ struct ArchitectView: View {
                     }
                 }
                 Text("\(d.timesPerWeek)× a week, any days. Nothing counts as a miss while you can still get there — the pressure only shows up once the week runs short.")
-                    .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    .font(.ui(12)).foregroundStyle(Theme.faint)
             }
             if !taper {
                 Divider()
-                Text("How you’ll check in each day").font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.ink2)
+                Text("How you’ll check in each day").font(.ui(12, weight: .medium)).foregroundStyle(Theme.ink2)
                 Picker("Check style", selection: $d.checkStyle) {
                     Text("Hold to log").tag("hold")
                     Text("Yes-or-no question").tag("yesno")
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.segmented).labelsHidden()
                 if d.checkStyle == "yesno" {
                     Field("The question your card will ask") { TextField("Did I sleep 8 hours last night?", text: $d.checkQuestion) }
                     Text("Answering no asks what got in the way — that’s the useful data. Leave blank to use your phase target.")
-                        .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                        .font(.ui(12)).foregroundStyle(Theme.faint)
                 }
             }
             Divider()
             Toggle(isOn: $d.reminderEnabled) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Reminder").font(.system(size: 14, weight: .medium))
-                    Text("A nudge at the moment you decided to act.").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    Text("Reminder").font(.ui(14, weight: .medium))
+                    Text("A nudge at the moment you decided to act.").font(.ui(12)).foregroundStyle(Theme.faint)
                 }
             }
             .tint(Theme.accent)
@@ -315,7 +315,7 @@ struct ArchitectView: View {
                     Image(systemName: "clock").foregroundStyle(Theme.faint)
                     TimeField(text: Binding(get: { d.reminderTime.isEmpty && d.cueType == "time" ? d.cueTime : d.reminderTime }, set: { d.reminderTime = $0 }))
                     Text(d.cueType == "time" && d.reminderTime.trimmed.isEmpty ? "Defaults to your cue time" : "On scheduled days")
-                        .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                        .font(.ui(12)).foregroundStyle(Theme.faint)
                 }
             }
             Field(breaking ? "Environment redesign — what I’ll remove tonight (optional)" : "Nightstand check (optional) — tomorrow’s environment prep") {
@@ -345,7 +345,7 @@ struct ArchitectView: View {
                     Field("If the urge is strong — my 2-minute resist") { TextField("Put the phone face-down and take 3 breaths", text: $d.failSafeAction, axis: .vertical) }
                     if !d.failSafeAction.trimmed.isEmpty && !Concreteness.failSafeIsTiny(d.failSafeAction) {
                         Text("That resist looks too big. Shrink it to one tiny action you could do in under two minutes (e.g. “phone face-down, 3 breaths”, not a whole ritual).")
-                            .font(.system(size: 12)).foregroundStyle(Theme.amber)
+                            .font(.ui(12)).foregroundStyle(Theme.amber)
                     }
                     Field("Make it difficult — my friction or commitment device") { TextField("Phone charges in the kitchen overnight", text: $d.frictionDevice, axis: .vertical) }
                 }
@@ -360,23 +360,23 @@ struct ArchitectView: View {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "shield").foregroundStyle(Theme.green)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(breaking ? "2-minute resist" : "Permanent fail-safe").font(.system(size: 14, weight: .medium))
+                    Text(breaking ? "2-minute resist" : "Permanent fail-safe").font(.ui(14, weight: .medium))
                     Text(d.failSafeAction.trimmed.nonEmpty ?? "Set the 2-minute \(breaking ? "resist" : "gateway") above")
-                        .font(.system(size: 14)).foregroundStyle(d.failSafeAction.trimmed.isEmpty ? Theme.faint : Theme.ink2)
+                        .font(.ui(14)).foregroundStyle(d.failSafeAction.trimmed.isEmpty ? Theme.faint : Theme.ink2)
                 }
             }
             .padding(12).frame(maxWidth: .infinity, alignment: .leading).background(Theme.bg, in: RoundedRectangle(cornerRadius: 12))
             Toggle(isOn: $d.confirmedQuick) {
-                Text(breaking ? "I can do this 2-minute resist whenever the urge hits." : "I can do this fail-safe in under two minutes.").font(.system(size: 14))
+                Text(breaking ? "I can do this 2-minute resist whenever the urge hits." : "I can do this fail-safe in under two minutes.").font(.ui(14))
             }
             .toggleStyle(CheckboxStyle())
 
             VStack(alignment: .leading, spacing: 10) {
                 Label(editing != nil ? "Current milestone" : breaking ? "Phase 1 — first milestone" : "Phase 1 — the automaticity target", systemImage: "target")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.ui(14, weight: .semibold))
                 if editing != nil && !needsTarget {
                     Text("This habit’s current phase has graduated. Define the next \(breaking ? "milestone" : "target") from its card on the Launchpad.")
-                        .font(.system(size: 13)).foregroundStyle(Theme.faint)
+                        .font(.ui(13)).foregroundStyle(Theme.faint)
                 } else {
                     stepFields(target: $d.targetText, done: $d.definitionOfDone, count: $d.targetCount, limit: $d.dailyLimit, first: true)
                 }
@@ -391,7 +391,7 @@ struct ArchitectView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Label(editing != nil ? "Upcoming milestone \(i + 1) — locked" : "Phase \(i + 2) — locked", systemImage: "lock")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.ui(14, weight: .semibold))
                             Spacer()
                             Button(role: .destructive) {
                                 if let uid = step.uid { removedPhaseUids.append(uid) }
@@ -407,16 +407,16 @@ struct ArchitectView: View {
                 }
                 if d.extraPhases.count < 5 {
                     Button { d.extraPhases.append(LadderStep()) } label: {
-                        Label("Add the next step", systemImage: "plus").font(.system(size: 14, weight: .medium)).frame(maxWidth: .infinity, minHeight: 42)
+                        Label("Add the next step", systemImage: "plus").font(.ui(14, weight: .medium)).frame(maxWidth: .infinity, minHeight: 42)
                             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line, style: StrokeStyle(lineWidth: 1, dash: [5, 4])))
                     }
                     .foregroundStyle(Theme.ink2)
                 } else {
                     Text(editing != nil ? "That’s five upcoming steps mapped — plenty of runway." : "That’s a full staircase — six phases is the max.")
-                        .font(.system(size: 12)).foregroundStyle(Theme.faint).frame(maxWidth: .infinity)
+                        .font(.ui(12)).foregroundStyle(Theme.faint).frame(maxWidth: .infinity)
                 }
                 Label("Each step unlocks automatically when the one before it passes its Automaticity Check. Start tiny — the climb takes care of itself.", systemImage: "lock")
-                    .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    .font(.ui(12)).foregroundStyle(Theme.faint)
             }
         }
     }
@@ -427,13 +427,13 @@ struct ArchitectView: View {
             TextField(breaking ? (taper ? "≤2 a day" : "Stay scroll-free 14 days") : (first ? "Walk 15 mins on the treadmill" : "Walk 25 mins on the treadmill"), text: target, axis: .vertical)
         }
         if taper {
-            Stepper("Daily limit: \(limit.wrappedValue)", value: limit, in: 0...1000).font(.system(size: 14))
+            Stepper("Daily limit: \(limit.wrappedValue)", value: limit, in: 0...1000).font(.ui(14))
         }
         Field(breaking ? "What counts as a clean day" : (first ? "Definition of done — the exact finish line" : "Definition of done")) {
             TextField(breaking ? "No scrolling in bed after 10pm" : "Both shoes on and standing on the treadmill belt", text: done, axis: .vertical)
         }
         Stepper("\(count.wrappedValue) \(breaking ? "clean days" : "reps") before the Automaticity Check", value: count, in: 1...1000)
-            .font(.system(size: 14))
+            .font(.ui(14))
     }
 
     private var rewardStage: some View {
@@ -446,7 +446,7 @@ struct ArchitectView: View {
                 }
                 Text(breaking ? "Also: every clean day you log casts a visible vote — the streak itself becomes the reward."
                      : "Your vote on the Launchpad is the built-in reward — this celebration seals it in the moment.")
-                    .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    .font(.ui(12)).foregroundStyle(Theme.faint)
             }
             NotesBox(key: "reward", breaking: breaking, notes: $d.sectionNotes)
         }
@@ -455,7 +455,7 @@ struct ArchitectView: View {
     private var setbacksSection: some View {
         SectionCard(title: "Prepare for setbacks") {
             Text("Never expect to fail, but always plan for it. When you miss a day, your plan shows up right on the card.")
-                .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                .font(.ui(12)).foregroundStyle(Theme.faint)
             ForEach(d.setbacks.indices, id: \.self) { i in
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 6) {
@@ -469,7 +469,7 @@ struct ArchitectView: View {
             if d.setbacks.count < 3 {
                 Button { d.setbacks.append(SetbackPlan(obstacle: "", plan: "")) } label: {
                     Label(d.setbacks.isEmpty ? "Add an if–then plan" : "Add another plan", systemImage: "plus")
-                        .font(.system(size: 14, weight: .medium)).frame(maxWidth: .infinity, minHeight: 42)
+                        .font(.ui(14, weight: .medium)).frame(maxWidth: .infinity, minHeight: 42)
                         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line, style: StrokeStyle(lineWidth: 1, dash: [5, 4])))
                 }
                 .foregroundStyle(Theme.ink2)
@@ -486,10 +486,10 @@ struct ArchitectView: View {
                 ForEach(failing, id: \.key) { c in
                     HStack(alignment: .top, spacing: 8) {
                         Circle().fill(Theme.accent.opacity(0.5)).frame(width: 6, height: 6).padding(.top, 7)
-                        (Text(c.label + ". ").fontWeight(.medium).foregroundStyle(Theme.ink) + Text(c.hint).foregroundStyle(Theme.ink2)).font(.system(size: 14))
+                        (Text(c.label + ". ").fontWeight(.medium).foregroundStyle(Theme.ink) + Text(c.hint).foregroundStyle(Theme.ink2)).font(.ui(14))
                     }
                 }
-                Text("These are nudges, not gates — you can save whenever you’re ready.").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                Text("These are nudges, not gates — you can save whenever you’re ready.").font(.ui(12)).foregroundStyle(Theme.faint)
             }
         }
     }
@@ -510,7 +510,7 @@ struct ArchitectView: View {
             Spacer()
             Button(role: .destructive) { confirmDelete = true } label: { Label("Delete habit", systemImage: "trash") }
         }
-        .font(.system(size: 14))
+        .font(.ui(14))
         .foregroundStyle(Theme.ink2)
         .padding(.horizontal, 4)
     }
@@ -585,7 +585,7 @@ struct SectionCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             if let title {
                 HStack(spacing: 6) {
-                    if let icon { Image(systemName: icon).font(.system(size: 12)) }
+                    if let icon { Image(systemName: icon).font(.ui(12)) }
                     Eyebrow(title, color: Theme.ink2)
                 }
             }
@@ -608,9 +608,9 @@ struct Field<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(label).font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.ink2)
+            Text(label).font(.ui(12, weight: .medium)).foregroundStyle(Theme.ink2)
             content
-                .font(.system(size: 16))
+                .font(.ui(16))
                 .padding(.horizontal, 12).padding(.vertical, 10)
                 .background(Theme.bg, in: RoundedRectangle(cornerRadius: 10))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.line))
@@ -628,7 +628,7 @@ struct InlineField: View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             Text(prefix).font(.serif(18)).foregroundStyle(Theme.ink)
             VStack(spacing: 2) {
-                TextField(placeholder, text: $text, axis: .vertical).font(.system(size: 16))
+                TextField(placeholder, text: $text, axis: .vertical).font(.ui(16))
                 Theme.accent.frame(height: 2)
             }
         }
@@ -652,7 +652,7 @@ struct TimeField: View {
                 }
             ), displayedComponents: .hourAndMinute)
             .labelsHidden()
-            if text.isEmpty { Text("not set").font(.system(size: 12)).foregroundStyle(Theme.faint) }
+            if text.isEmpty { Text("not set").font(.ui(12)).foregroundStyle(Theme.faint) }
         }
     }
 }
@@ -668,15 +668,15 @@ struct LoopStage<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
-                Text("\(step)").font(.system(size: 14, weight: .bold)).foregroundStyle(Theme.accent)
+                Text("\(step)").font(.ui(14, weight: .bold)).foregroundStyle(Theme.accent)
                     .frame(width: 32, height: 32).background(Theme.accent.opacity(0.15), in: Circle())
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
-                        Text(title).font(.system(size: 18, weight: .semibold)).foregroundStyle(Theme.ink)
-                        Text(law.uppercased()).font(.system(size: 10, weight: .semibold)).tracking(0.6).foregroundStyle(Theme.ink2)
+                        Text(title).font(.ui(18, weight: .semibold)).foregroundStyle(Theme.ink)
+                        Text(caps(law)).font(.ui(10, weight: .semibold)).capsTracking(0.6).foregroundStyle(Theme.ink2)
                             .padding(.horizontal, 7).padding(.vertical, 3).background(Theme.panel, in: Capsule())
                     }
-                    Text(blurb).font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    Text(blurb).font(.ui(12)).foregroundStyle(Theme.faint)
                 }
             }
             VStack(alignment: .leading, spacing: 14) { content }
@@ -708,7 +708,7 @@ struct NotesBox: View {
                     .lineLimit(2...)
             }
             if let s = Self.suggestions[key] {
-                Text("Other ways: " + (breaking ? s.break : s.build).joined(separator: " · ")).font(.system(size: 11)).foregroundStyle(Theme.faint)
+                Text("Other ways: " + (breaking ? s.break : s.build).joined(separator: " · ")).font(.ui(11)).foregroundStyle(Theme.faint)
             }
         }
         if bare {
@@ -725,7 +725,7 @@ struct CheckboxStyle: ToggleStyle {
         Button { configuration.isOn.toggle() } label: {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: configuration.isOn ? "checkmark.square.fill" : "square")
-                    .font(.system(size: 18)).foregroundStyle(configuration.isOn ? Theme.accent : Theme.faint)
+                    .font(.ui(18)).foregroundStyle(configuration.isOn ? Theme.accent : Theme.faint)
                 configuration.label.foregroundStyle(Theme.ink2)
                 Spacer(minLength: 0)
             }

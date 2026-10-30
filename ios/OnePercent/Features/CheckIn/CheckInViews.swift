@@ -22,9 +22,9 @@ struct CheckInCardView: View {
             Button { open = true } label: {
                 VStack(alignment: .leading, spacing: 4) {
                     Label("Look back on your week", systemImage: "calendar.badge.checkmark")
-                        .font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.ink)
+                        .font(.ui(16, weight: .semibold)).foregroundStyle(Theme.ink)
                     Text("A few honest minutes, when you’re ready. Tap to look back.")
-                        .font(.system(size: 13)).foregroundStyle(Theme.ink2).multilineTextAlignment(.leading)
+                        .font(.ui(13)).foregroundStyle(Theme.ink2).multilineTextAlignment(.leading)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -39,7 +39,7 @@ struct CheckInCardView: View {
                     } catch { toasts.error("Could not skip the check-in.") }
                 }
             } label: {
-                Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.muted)
+                Image(systemName: "xmark").font(.ui(13, weight: .semibold)).foregroundStyle(Theme.muted)
                     .frame(width: 32, height: 32)
             }
             .accessibilityLabel("Dismiss the check-in")
@@ -83,14 +83,14 @@ struct CheckInSheet: View {
                         ForEach(Array(pack.summary.enumerated()), id: \.offset) { _, s in
                             HStack(alignment: .top) {
                                 VStack(alignment: .leading, spacing: 3) {
-                                    Text(s.title).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.ink)
+                                    Text(s.title).font(.ui(14, weight: .medium)).foregroundStyle(Theme.ink)
                                     if !s.redDots.isEmpty {
-                                        Text("Missed: \(s.redDots.joined(separator: ", "))").font(.system(size: 12)).foregroundStyle(Theme.muted)
+                                        Text("Missed: \(s.redDots.joined(separator: ", "))").font(.ui(12)).foregroundStyle(Theme.muted)
                                     }
                                 }
                                 Spacer()
                                 Text("\(s.hits)/\(s.scheduled) \(s.scheduleType == "weekly" ? "sessions" : "days")")
-                                    .font(.system(size: 12, weight: .medium))
+                                    .font(.ui(12, weight: .medium))
                                     .padding(.horizontal, 10).padding(.vertical, 4)
                                     .foregroundStyle(s.hits >= s.scheduled ? green : Theme.muted)
                                     .background((s.hits >= s.scheduled ? green.opacity(0.12) : Color.black.opacity(0.06)), in: Capsule())
@@ -130,7 +130,7 @@ struct CheckInSheet: View {
                         ForEach(1...10, id: \.self) { n in
                             let on = draft.rating == n
                             Button { draft.rating = on ? nil : n } label: {
-                                Text("\(n)").font(.system(size: 14, weight: .semibold))
+                                Text("\(n)").font(.ui(14, weight: .semibold))
                                     .frame(maxWidth: .infinity, minHeight: 36)
                                     .foregroundStyle(on ? .white : Theme.ink)
                                     .background(on ? green : Theme.panel, in: RoundedRectangle(cornerRadius: 8))
@@ -194,14 +194,14 @@ struct CheckInSheet: View {
 
     private func missRow(_ m: CheckInPack.UnexplainedMiss) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("\(m.habit.title) — \(m.weekdayName)").font(.system(size: 13.5, weight: .medium)).foregroundStyle(Theme.ink)
+            Text("\(m.habit.title) — \(m.weekdayName)").font(.ui(13.5, weight: .medium)).foregroundStyle(Theme.ink)
             ChipFlow(items: MissReasons.chips(setbackPlans: nil, extra: m.obstacles), label: { $0 }, isOn: { row(m.id).reasons.contains($0) }) { chip in
                 var r = row(m.id)
                 if let i = r.reasons.firstIndex(of: chip) { r.reasons.remove(at: i) } else if r.reasons.count < 5 { r.reasons.append(chip) }
                 sweep[m.id] = r
             }
             TextField("Anything else? (optional)", text: Binding(get: { row(m.id).note }, set: { var r = row(m.id); r.note = String($0.prefix(500)); sweep[m.id] = r }))
-                .font(.system(size: 13.5))
+                .font(.ui(13.5))
         }
         .padding(.vertical, 4)
     }

@@ -30,14 +30,8 @@ struct CompassView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    header
-                    Picker("Section", selection: $section) {
-                        Text("A · Now").tag(Section.a)
-                        Text("Z · Heading").tag(Section.z)
-                        Text("B · First habit").tag(Section.b)
-                        Text("Saved").tag(Section.history)
-                    }
-                    .pickerStyle(.segmented)
+                    header.phoneOnly()
+                    sectionPicker.pickerStyle(.segmented).labelsHidden().phoneOnly()
                     switch section {
                     case .a: sectionA
                     case .z: sectionZ
@@ -51,6 +45,7 @@ struct CompassView: View {
             .background(Theme.bg)
             .scrollDismissesKeyboard(.interactively)
             .hidePhoneNavBar()
+            .macToolbarPicker { sectionPicker }
         }
         .onAppear {
             guard !loaded, let p = profile else { return }
@@ -71,18 +66,27 @@ struct CompassView: View {
         }
     }
 
+    private var sectionPicker: some View {
+        Picker("Section", selection: $section) {
+            Text("A · Now").tag(Section.a)
+            Text("Z · Heading").tag(Section.z)
+            Text("B · First habit").tag(Section.b)
+            Text("Saved").tag(Section.history)
+        }
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Image(systemName: "safari").font(.system(size: 12))
+                Image(systemName: "safari").font(.ui(12))
                 Eyebrow("The Compass")
                 Spacer()
-                Label("Autosaves — goals sync live", systemImage: "square.and.arrow.down").font(.system(size: 10)).foregroundStyle(Theme.faint)
+                Label("Autosaves — goals sync live", systemImage: "square.and.arrow.down").font(.ui(10)).foregroundStyle(Theme.faint)
             }
             .foregroundStyle(Theme.faint)
-            Text("Set your bearings").font(.system(size: 26, weight: .semibold)).tracking(-0.5).foregroundStyle(Theme.ink)
+            Text("Set your bearings").font(.ui(26, weight: .semibold)).tracking(-0.5).foregroundStyle(Theme.ink)
             Text("Where you are (A), where you’re heading (Z), and the one habit that starts the path (B). Fill it in your own words — it autosaves as you go.")
-                .font(.system(size: 14)).foregroundStyle(Theme.ink2)
+                .font(.ui(14)).foregroundStyle(Theme.ink2)
         }
         .padding(.top, 12)
     }
@@ -109,12 +113,12 @@ struct CompassView: View {
 
     private func rating(_ label: String, value: Binding<Int?>, why: Binding<String?>) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(label).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.ink)
-            Text("How content are you, 1–5?").font(.system(size: 12)).foregroundStyle(Theme.faint)
+            Text(label).font(.ui(14, weight: .medium)).foregroundStyle(Theme.ink)
+            Text("How content are you, 1–5?").font(.ui(12)).foregroundStyle(Theme.faint)
             HStack(spacing: 6) {
                 ForEach(1...5, id: \.self) { n in
                     Button { value.wrappedValue = n } label: {
-                        Text("\(n)").font(.system(size: 14, weight: .semibold)).frame(width: 40, height: 40)
+                        Text("\(n)").font(.ui(14, weight: .semibold)).frame(width: 40, height: 40)
                             .foregroundStyle(value.wrappedValue == n ? Theme.buttonText : Theme.ink2)
                             .background(value.wrappedValue == n ? Theme.button : Theme.panel, in: RoundedRectangle(cornerRadius: 10))
                     }
@@ -122,15 +126,15 @@ struct CompassView: View {
                 }
             }
             .sensoryFeedback(.selection, trigger: value.wrappedValue)
-            TextField("Why that number?", text: opt(why), axis: .vertical).font(.system(size: 15))
+            TextField("Why that number?", text: opt(why), axis: .vertical).font(.ui(15))
                 .padding(10).background(Theme.bg, in: RoundedRectangle(cornerRadius: 10))
         }
     }
 
     private var stickyHabits: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Past sticky habits").font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.ink)
-            Text("Habits that actually stuck before — and why. This is gold for the next one.").font(.system(size: 12)).foregroundStyle(Theme.faint)
+            Text("Past sticky habits").font(.ui(14, weight: .medium)).foregroundStyle(Theme.ink)
+            Text("Habits that actually stuck before — and why. This is gold for the next one.").font(.ui(12)).foregroundStyle(Theme.faint)
             let rows = Binding<[CompassDraft.StickyHabit]>(
                 get: { (draft.assessment.pastStickyHabits ?? []).isEmpty ? [.init()] : draft.assessment.pastStickyHabits! },
                 set: { draft.assessment.pastStickyHabits = $0 }
@@ -141,14 +145,14 @@ struct CompassView: View {
                         TextField("The habit", text: rows[i].habit)
                         TextField("Why it stuck", text: rows[i].whyItStuck)
                     }
-                    .font(.system(size: 15))
+                    .font(.ui(15))
                     if rows.wrappedValue.count > 1 {
                         Button { rows.wrappedValue.remove(at: i) } label: { Image(systemName: "trash") }.foregroundStyle(Theme.faint)
                     }
                 }
                 .padding(10).background(Theme.bg, in: RoundedRectangle(cornerRadius: 10))
             }
-            Button { rows.wrappedValue.append(.init()) } label: { Label("Add another", systemImage: "plus").font(.system(size: 13)) }
+            Button { rows.wrappedValue.append(.init()) } label: { Label("Add another", systemImage: "plus").font(.ui(13)) }
         }
     }
 
@@ -162,11 +166,11 @@ struct CompassView: View {
                 }
                 Field("What does success mean to you?") { TextField("", text: opt($draft.vision.successMeaning), axis: .vertical).lineLimit(2...) }
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Your vision by life domain").font(.system(size: 14, weight: .medium))
-                    Text("A line each — leave blank any that don’t matter to you.").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    Text("Your vision by life domain").font(.ui(14, weight: .medium))
+                    Text("A line each — leave blank any that don’t matter to you.").font(.ui(12)).foregroundStyle(Theme.faint)
                     ForEach(Compass.domains, id: \.0) { value, name in
                         HStack {
-                            Text(name).font(.system(size: 13, weight: .medium)).frame(width: 100, alignment: .leading).foregroundStyle(Theme.ink2)
+                            Text(name).font(.ui(13, weight: .medium)).frame(width: 100, alignment: .leading).foregroundStyle(Theme.ink2)
                             TextField("…", text: Binding(
                                 get: { draft.vision.domainVisions?.first { $0.domain == value }?.vision ?? "" },
                                 set: { v in
@@ -187,14 +191,14 @@ struct CompassView: View {
                 }
             }
             SectionCard(title: "Your concrete goals") {
-                Text("The destinations your habits will serve. Big-picture is fine — they go live as you type.").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                Text("The destinations your habits will serve. Big-picture is fine — they go live as you type.").font(.ui(12)).foregroundStyle(Theme.faint)
                 if draft.goals.isEmpty {
-                    Text("No goals yet. Add one, or talk it through with the AI helper to pull some in.").font(.system(size: 13)).foregroundStyle(Theme.faint)
+                    Text("No goals yet. Add one, or talk it through with the AI helper to pull some in.").font(.ui(13)).foregroundStyle(Theme.faint)
                 }
                 ForEach($draft.goals) { $g in
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            TextField("e.g. Run a half marathon", text: $g.title, axis: .vertical).font(.system(size: 16, weight: .medium))
+                            TextField("e.g. Run a half marathon", text: $g.title, axis: .vertical).font(.ui(16, weight: .medium))
                             Button { draft.goals.removeAll { $0.id == g.id } } label: { Image(systemName: "trash") }.foregroundStyle(Theme.faint)
                         }
                         HStack {
@@ -202,13 +206,13 @@ struct CompassView: View {
                                 ForEach(Compass.domains, id: \.0) { Text($0.1).tag($0.0) }
                             }
                             .pickerStyle(.menu).tint(Theme.ink2)
-                            TextField("by when? (optional)", text: opt($g.timeframe)).font(.system(size: 14))
+                            TextField("by when? (optional)", text: opt($g.timeframe)).font(.ui(14))
                         }
-                        TextField("why it matters", text: opt($g.whyText), axis: .vertical).font(.system(size: 14)).foregroundStyle(Theme.ink2)
+                        TextField("why it matters", text: opt($g.whyText), axis: .vertical).font(.ui(14)).foregroundStyle(Theme.ink2)
                     }
                     .padding(12).background(Theme.bg, in: RoundedRectangle(cornerRadius: 12))
                 }
-                Button { draft.goals.append(.init()) } label: { Label("Add goal", systemImage: "plus").font(.system(size: 14, weight: .medium)) }
+                Button { draft.goals.append(.init()) } label: { Label("Add goal", systemImage: "plus").font(.ui(14, weight: .medium)) }
             }
             CompassAISlot.make(stage: "vision", draft: $draft)
         }
@@ -224,16 +228,16 @@ struct CompassView: View {
         VStack(spacing: 16) {
             SectionCard(title: "Goals → systems → the first habit") {
                 Text("Z is your goal; B is the first habit of the system that gets you there. For each goal, sketch the system — then hand one habit to the Architect to engineer properly.")
-                    .font(.system(size: 13)).foregroundStyle(Theme.ink2)
+                    .font(.ui(13)).foregroundStyle(Theme.ink2)
                 if draft.goals.isEmpty {
-                    Button("Add some goals in the Z section first.") { section = .z }.font(.system(size: 13))
+                    Button("Add some goals in the Z section first.") { section = .z }.font(.ui(13))
                 }
                 ForEach($draft.goals) { $g in
                     let live = liveGoal(g)
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text(Compass.domains.first { $0.0 == g.domain }?.1.uppercased() ?? "").font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.faint)
-                            Text(g.title.trimmed.nonEmpty ?? "Untitled goal").font(.system(size: 15, weight: .medium)).foregroundStyle(g.title.trimmed.isEmpty ? Theme.faint : Theme.ink)
+                            Text(Compass.domains.first { $0.0 == g.domain }.map { caps($0.1) } ?? "").font(.ui(10, weight: .semibold)).foregroundStyle(Theme.faint)
+                            Text(g.title.trimmed.nonEmpty ?? "Untitled goal").font(.ui(15, weight: .medium)).foregroundStyle(g.title.trimmed.isEmpty ? Theme.faint : Theme.ink)
                         }
                         Field("Current system — what are you doing now? Write “none” if nothing.") { TextField("", text: opt($g.currentSystem), axis: .vertical) }
                         Field("Ideal system — what would the ideal system for YOU look like?") { TextField("", text: opt($g.idealSystem), axis: .vertical) }
@@ -243,21 +247,21 @@ struct CompassView: View {
                             ForEach(linked) { h in
                                 Button { router.architect = ArchitectSeed(habit: h) } label: {
                                     HStack {
-                                        Text(h.title).font(.system(size: 13)).foregroundStyle(Theme.ink).multilineTextAlignment(.leading)
-                                        if h.pausedAt != nil { Text("paused").font(.system(size: 11)).foregroundStyle(Theme.faint) }
+                                        Text(h.title).font(.ui(13)).foregroundStyle(Theme.ink).multilineTextAlignment(.leading)
+                                        if h.pausedAt != nil { Text("paused").font(.ui(11)).foregroundStyle(Theme.faint) }
                                         Spacer()
-                                        Image(systemName: "arrow.up.right").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                                        Image(systemName: "arrow.up.right").font(.ui(12)).foregroundStyle(Theme.faint)
                                     }
                                 }
                             }
                         }
                         HStack {
-                            Text(live != nil ? "Linked to your live goal." : "Give this goal a title — it links automatically.").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                            Text(live != nil ? "Linked to your live goal." : "Give this goal a title — it links automatically.").font(.ui(12)).foregroundStyle(Theme.faint)
                             Spacer()
                             Button {
                                 let seed = g.idealSystem?.trimmed.nonEmpty ?? g.currentSystem?.trimmed.nonEmpty ?? g.title
                                 router.architect = ArchitectSeed(goal: live, interviewSeed: seed)
-                            } label: { Label("Design this habit", systemImage: "hammer").font(.system(size: 13, weight: .semibold)) }
+                            } label: { Label("Design this habit", systemImage: "hammer").font(.ui(13, weight: .semibold)) }
                             .buttonStyle(.borderedProminent).tint(Theme.button)
                             .disabled(g.title.trimmed.isEmpty)
                         }
@@ -270,10 +274,10 @@ struct CompassView: View {
             if !unassigned.isEmpty {
                 SectionCard(title: "Unassigned habits", icon: "link") {
                     Text("These aren’t linked to a goal yet — habits stick better when they serve something bigger. Pick a goal for each.")
-                        .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                        .font(.ui(12)).foregroundStyle(Theme.faint)
                     ForEach(unassigned) { h in
                         HStack {
-                            Text(h.title).font(.system(size: 13)).foregroundStyle(Theme.ink)
+                            Text(h.title).font(.ui(13)).foregroundStyle(Theme.ink)
                             Spacer()
                             Menu("Link to a goal…") {
                                 ForEach(active) { g in
@@ -284,12 +288,12 @@ struct CompassView: View {
                                     }
                                 }
                             }
-                            .font(.system(size: 13))
+                            .font(.ui(13))
                             .disabled(active.isEmpty)
                         }
                     }
                     if active.isEmpty {
-                        Text("Add a goal in the Z section first — it becomes linkable straight away.").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                        Text("Add a goal in the Z section first — it becomes linkable straight away.").font(.ui(12)).foregroundStyle(Theme.faint)
                     }
                 }
             }
@@ -303,7 +307,7 @@ struct CompassView: View {
         VStack(spacing: 16) {
             SectionCard(title: "Save a snapshot", icon: "square.and.arrow.down") {
                 Text("Your worksheet is already live — goals sync as you go. A snapshot just freezes a read-only copy of this moment you can look back on or restore later.")
-                    .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    .font(.ui(12)).foregroundStyle(Theme.faint)
                 HStack {
                     TextField("e.g. Winter reset", text: $label).textFieldStyle(.roundedBorder)
                     Button("Save snapshot") {
@@ -320,18 +324,18 @@ struct CompassView: View {
             }
             SectionCard(title: "Your snapshots", icon: "clock.arrow.circlepath") {
                 if snapshots.isEmpty {
-                    Text("No snapshots yet. Fill in the worksheet, then save one above.").font(.system(size: 13)).foregroundStyle(Theme.faint)
+                    Text("No snapshots yet. Fill in the worksheet, then save one above.").font(.ui(13)).foregroundStyle(Theme.faint)
                 }
                 ForEach(snapshots) { s in
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(s.label ?? "Untitled").font(.system(size: 14, weight: .medium))
+                            Text(s.label ?? "Untitled").font(.ui(14, weight: .medium))
                             let n = Compass.draft(of: s).goals.count
-                            Text("\(s.createdAt.formatted(date: .abbreviated, time: .omitted)) · \(n) goal\(n == 1 ? "" : "s")").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                            Text("\(s.createdAt.formatted(date: .abbreviated, time: .omitted)) · \(n) goal\(n == 1 ? "" : "s")").font(.ui(12)).foregroundStyle(Theme.faint)
                         }
                         Spacer()
                         Button { viewing = s } label: { Image(systemName: "eye") }
-                        Button("Restore") { confirmRestore = s }.font(.system(size: 13, weight: .medium))
+                        Button("Restore") { confirmRestore = s }.font(.ui(13, weight: .medium))
                         Button(role: .destructive) {
                             ctx.delete(s)
                             try? ctx.save()
@@ -342,7 +346,7 @@ struct CompassView: View {
             }
             SectionCard(title: "Start fresh", icon: "flame") {
                 Text("Clear the worksheet and shelve its goals — linked habits pause (nothing owed, recoverable) and your assessment resets. Saved snapshots stay untouched.")
-                    .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    .font(.ui(12)).foregroundStyle(Theme.faint)
                 Button { confirmReset = true } label: { Label("Clear worksheet & start fresh", systemImage: "arrow.counterclockwise") }
                     .buttonStyle(SecondaryButtonStyle())
             }
@@ -405,8 +409,8 @@ struct ListEditor: View {
     var body: some View {
         let rows = (values ?? []).isEmpty ? [""] : values!
         VStack(alignment: .leading, spacing: 6) {
-            Text(label).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.ink)
-            if let hint { Text(hint).font(.system(size: 12)).foregroundStyle(Theme.faint) }
+            Text(label).font(.ui(14, weight: .medium)).foregroundStyle(Theme.ink)
+            if let hint { Text(hint).font(.ui(12)).foregroundStyle(Theme.faint) }
             ForEach(rows.indices, id: \.self) { i in
                 HStack {
                     TextField(placeholder, text: Binding(get: { rows.indices.contains(i) ? rows[i] : "" }, set: { v in
@@ -414,14 +418,14 @@ struct ListEditor: View {
                         r[i] = v
                         values = r
                     }))
-                    .font(.system(size: 15))
+                    .font(.ui(15))
                     if rows.count > 1 {
                         Button { var r = rows; r.remove(at: i); values = r } label: { Image(systemName: "trash") }.foregroundStyle(Theme.faint)
                     }
                 }
                 .padding(10).background(Theme.bg, in: RoundedRectangle(cornerRadius: 10))
             }
-            Button { values = (values ?? []) + [""] } label: { Label("Add another", systemImage: "plus").font(.system(size: 13)) }
+            Button { values = (values ?? []) + [""] } label: { Label("Add another", systemImage: "plus").font(.ui(13)) }
         }
     }
 }
@@ -449,8 +453,8 @@ struct SnapshotViewer: View {
                 Section("Goals") {
                     ForEach(d.goals) { g in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(g.title).font(.system(size: 15, weight: .medium))
-                            if let w = g.whyText?.nonEmpty { Text(w).font(.system(size: 13)).foregroundStyle(Theme.ink2) }
+                            Text(g.title).font(.ui(15, weight: .medium))
+                            if let w = g.whyText?.nonEmpty { Text(w).font(.ui(13)).foregroundStyle(Theme.ink2) }
                         }
                     }
                 }
@@ -464,8 +468,8 @@ struct SnapshotViewer: View {
     @ViewBuilder private func line(_ label: String, _ value: String?) -> some View {
         if let value {
             VStack(alignment: .leading, spacing: 2) {
-                Text(label).font(.system(size: 12)).foregroundStyle(Theme.faint)
-                Text(value).font(.system(size: 15))
+                Text(label).font(.ui(12)).foregroundStyle(Theme.faint)
+                Text(value).font(.ui(15))
             }
         }
     }

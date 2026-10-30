@@ -49,6 +49,25 @@ extension View {
         #endif
     }
 
+    /// Content only the iPhone shows — mostly in-page headers, which the Mac
+    /// puts in the window's title bar instead.
+    @ViewBuilder func phoneOnly() -> some View {
+        #if os(iOS)
+        self
+        #endif
+    }
+
+    /// A section switcher: inline on the iPhone, centred in the toolbar on the
+    /// Mac, where a window keeps its controls.
+    @ViewBuilder func macToolbarPicker<P: View>(@ViewBuilder _ picker: () -> P) -> some View {
+        #if os(macOS)
+        let p = picker()
+        toolbar { ToolbarItem(placement: .principal) { p.pickerStyle(.segmented).labelsHidden().fixedSize() } }
+        #else
+        self
+        #endif
+    }
+
     /// Mac: sheets size to their content, which for a Form is too small to use.
     @ViewBuilder func macSheet(width: CGFloat, height: CGFloat) -> some View {
         #if os(macOS)
@@ -138,7 +157,7 @@ struct ShareSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                 if let url = item as? URL {
-                    Text(url.lastPathComponent).font(.system(size: 13, weight: .medium))
+                    Text(url.lastPathComponent).font(.ui(13, weight: .medium))
                     HStack {
                         Button("Save…") { save(url) }.keyboardShortcut(.defaultAction)
                         ShareLink(item: url)

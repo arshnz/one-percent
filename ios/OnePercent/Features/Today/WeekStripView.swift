@@ -38,7 +38,7 @@ struct WeekStripView: View {
                         .accessibilityLabel(label(d, k))
                         .accessibilityAddTraits(canEdit ? .isButton : [])
                     Text(Self.letters[LocalDate.weekday(d.date)])
-                        .font(.system(size: 9, weight: .medium))
+                        .font(.ui(9, weight: .medium))
                         .foregroundStyle(isToday ? Theme.ink2 : Theme.faint)
                 }
             }

@@ -18,7 +18,7 @@ struct SheetHeader: View {
                 Button(closeLabel, action: onClose).buttonStyle(LinkButtonStyle())
             }
             if let subtitle {
-                Text(subtitle).font(.system(size: 13)).foregroundStyle(Theme.muted)
+                Text(subtitle).font(.ui(13)).foregroundStyle(Theme.muted)
             }
         }
     }
@@ -36,7 +36,7 @@ struct ChipFlow<Item: Hashable>: View {
                 let on = isOn(item)
                 Button { toggle(item) } label: {
                     Text(label(item))
-                        .font(.system(size: 13.5, weight: .medium))
+                        .font(.ui(13.5, weight: .medium))
                         .padding(.horizontal, 12).padding(.vertical, 8)
                         .foregroundStyle(on ? Theme.gold : Theme.ink)
                         .background(on ? Theme.accentSoft : Theme.panel, in: Capsule())
@@ -91,7 +91,7 @@ struct GoldilocksSheet: View {
             HStack(spacing: 8) {
                 ForEach(options, id: \.0) { value, label in
                     Button(label) { onRate(value) }
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.ui(14, weight: .medium))
                         .foregroundStyle(Theme.ink)
                         .frame(maxWidth: .infinity, minHeight: 46)
                         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 10))
@@ -166,7 +166,7 @@ struct EditDaySheet: View {
             )
             if taper {
                 VStack(spacing: 14) {
-                    Text("Limit that day: \(dailyLimit). Under the line is a vote.").font(.system(size: 13)).foregroundStyle(Theme.muted)
+                    Text("Limit that day: \(dailyLimit). Under the line is a vote.").font(.ui(13)).foregroundStyle(Theme.muted)
                     Stepper3(value: $qty)
                     Button { onSetCount(qty) } label: { Label("Save that day’s count", systemImage: "checkmark") }
                         .buttonStyle(PrimaryButtonStyle())
@@ -184,7 +184,7 @@ struct EditDaySheet: View {
                                 Spacer()
                                 if active { Eyebrow("Current", color: Theme.accent) }
                             }
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.ui(15, weight: .medium))
                             .padding(.horizontal, 16).frame(minHeight: 50)
                             .background(active ? Theme.accentSoft : Theme.panel, in: RoundedRectangle(cornerRadius: 12))
                             .overlay(RoundedRectangle(cornerRadius: 12).stroke(active ? Theme.accent : Theme.line))
@@ -221,7 +221,7 @@ struct Stepper3: View {
 
     private func round(_ icon: String, _ action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: icon).font(.system(size: 17, weight: .medium)).foregroundStyle(Theme.ink)
+            Image(systemName: icon).font(.ui(17, weight: .medium)).foregroundStyle(Theme.ink)
                 .frame(width: 44, height: 44).background(Theme.card, in: Circle())
                 .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
         }
@@ -248,22 +248,22 @@ struct AutomaticityCheckSheet: View {
                         VStack(spacing: 10) {
                             Text("Not automatic yet — and that’s fine.").font(.serif(19)).foregroundStyle(Theme.ink)
                             Text("Keep casting votes. We’ll check again in about a week. Habits become second nature through repetition in a stable context, not by hitting a number.")
-                                .font(.system(size: 14)).foregroundStyle(Theme.ink2).multilineTextAlignment(.center)
+                                .font(.ui(14)).foregroundStyle(Theme.ink2).multilineTextAlignment(.center)
                             Button("Keep going", action: onClose).buttonStyle(PrimaryButtonStyle()).padding(.top, 8)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.top, 20)
                     } else {
                         Text("How true is each of these about “\(habitTitle)” right now?")
-                            .font(.system(size: 14)).foregroundStyle(Theme.ink2)
+                            .font(.ui(14)).foregroundStyle(Theme.ink2)
                         ForEach(0..<4, id: \.self) { i in
                             VStack(alignment: .leading, spacing: 10) {
-                                Text(Automaticity.items[i]).font(.system(size: 15, weight: .medium)).foregroundStyle(Theme.ink)
+                                Text(Automaticity.items[i]).font(.ui(15, weight: .medium)).foregroundStyle(Theme.ink)
                                 HStack(spacing: 6) {
                                     ForEach(1...5, id: \.self) { n in
                                         let on = scores[i] == n
                                         Button { scores[i] = n } label: {
-                                            Text("\(n)").font(.system(size: 15, weight: .semibold))
+                                            Text("\(n)").font(.ui(15, weight: .semibold))
                                                 .frame(maxWidth: .infinity, minHeight: 42)
                                                 .foregroundStyle(on ? Theme.buttonText : Theme.ink)
                                                 .background(on ? Theme.button : Theme.panel, in: RoundedRectangle(cornerRadius: 10))
@@ -274,7 +274,7 @@ struct AutomaticityCheckSheet: View {
                                 HStack {
                                     Text("Disagree"); Spacer(); Text("Agree")
                                 }
-                                .font(.system(size: 11)).foregroundStyle(Theme.faint)
+                                .font(.ui(11)).foregroundStyle(Theme.faint)
                             }
                         }
                         Button("Submit") {
@@ -313,7 +313,7 @@ struct NextPhaseSheet: View {
             Form {
                 Section {
                     Text("**\(habitTitle)** is on autopilot. Raise the bar a little — the next target should stretch you without breaking the routine.")
-                        .font(.system(size: 14)).foregroundStyle(Theme.ink2)
+                        .font(.ui(14)).foregroundStyle(Theme.ink2)
                 }
                 Section("New daily target") {
                     TextField("Walk 25 mins on the treadmill", text: $target, axis: .vertical)

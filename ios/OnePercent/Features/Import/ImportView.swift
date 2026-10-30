@@ -23,7 +23,7 @@ struct ImportView: View {
             HStack(spacing: 10) {
                 ProgressView().controlSize(.small)
                 Text("Checking iCloud for your data… if you already use One Percent on another device, it will appear here on its own. Leave this open for a minute.")
-                    .font(.system(size: 13)).foregroundStyle(.secondary)
+                    .font(.ui(13)).foregroundStyle(.secondary)
             }
             .padding(14)
             .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))

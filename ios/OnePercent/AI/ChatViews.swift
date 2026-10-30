@@ -18,7 +18,7 @@ struct MessageBubble: View {
                     Text((try? AttributedString(markdown: message.text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(message.text))
                 }
             }
-            .font(.system(size: 15))
+            .font(.ui(15))
             .foregroundStyle(mine ? Theme.buttonText : Theme.ink)
             .padding(.horizontal, 14).padding(.vertical, 10)
             .background(mine ? Theme.button : Theme.panel, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -54,7 +54,7 @@ struct GuidedChatView: View {
                 MessageBubble(message: m, streaming: streaming && m.id == messages.last?.id && m.role == "model")
             }
             if let error {
-                Text(error).font(.system(size: 13)).foregroundStyle(Theme.red)
+                Text(error).font(.ui(13)).foregroundStyle(Theme.red)
             }
             HStack(alignment: .bottom, spacing: 8) {
                 TextField(placeholder, text: $input, axis: .vertical)
@@ -65,7 +65,7 @@ struct GuidedChatView: View {
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.line))
                     .disabled(streaming)
                 Button(action: send) {
-                    Image(systemName: "arrow.up").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.buttonText)
+                    Image(systemName: "arrow.up").font(.ui(15, weight: .bold)).foregroundStyle(Theme.buttonText)
                         .frame(width: 40, height: 40).background(Theme.button, in: Circle())
                 }
                 .disabled(input.trimmed.isEmpty || streaming)
@@ -76,7 +76,7 @@ struct GuidedChatView: View {
                 AIStatusBadge()
                 Spacer()
                 Button { handOff = HandOff(title: "Hand off this conversation", prompt: handOffPrompt(), pasteLabel: "Paste their reply") } label: {
-                    Label("Hand off", systemImage: "arrow.up.forward.app").font(.system(size: 12, weight: .medium))
+                    Label("Hand off", systemImage: "arrow.up.forward.app").font(.ui(12, weight: .medium))
                 }
                 .foregroundStyle(Theme.ink2)
             }
@@ -126,7 +126,7 @@ struct AIStatusBadge: View {
     var body: some View {
         let s = AIEngine.status
         Label(s.isAvailable ? s.label : "Built-in AI unavailable — use Hand off", systemImage: s.isAvailable ? (s == .cloud ? "lock.icloud" : "iphone") : "exclamationmark.circle")
-            .font(.system(size: 11))
+            .font(.ui(11))
             .foregroundStyle(Theme.faint)
             .lineLimit(1)
     }
@@ -169,7 +169,7 @@ struct HandOffSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Copy this into Claude or any AI assistant. It carries your habits, goals and recent week, so the answer is about you.")
-                        .font(.system(size: 14)).foregroundStyle(Theme.ink2)
+                        .font(.ui(14)).foregroundStyle(Theme.ink2)
                     HStack(spacing: 10) {
                         Button {
                             Clipboard.string = handOff.prompt
@@ -181,19 +181,19 @@ struct HandOffSheet: View {
                             .buttonStyle(SecondaryButtonStyle())
                     }
                     Text(handOff.prompt)
-                        .font(.system(size: 12, design: .monospaced)).foregroundStyle(Theme.ink2)
+                        .font(.ui(12, design: .monospaced)).foregroundStyle(Theme.ink2)
                         .padding(12).frame(maxWidth: .infinity, alignment: .leading)
                         .background(Theme.panel, in: RoundedRectangle(cornerRadius: 12))
                         .textSelection(.enabled)
                     if let onPaste, let label = handOff.pasteLabel {
                         Divider()
-                        Text(label).font(.system(size: 14, weight: .semibold))
+                        Text(label).font(.ui(14, weight: .semibold))
                         TextField("Paste the answer here", text: $pasted, axis: .vertical)
                             .lineLimit(4...12)
                             .padding(10).background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
                             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.line))
                         HStack {
-                            Button("Paste from clipboard") { pasted = Clipboard.string ?? pasted }.font(.system(size: 13))
+                            Button("Paste from clipboard") { pasted = Clipboard.string ?? pasted }.font(.ui(13))
                             Spacer()
                             Button("Use this answer") {
                                 onPaste(pasted.trimmed)

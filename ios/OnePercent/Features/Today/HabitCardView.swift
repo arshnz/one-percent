@@ -101,7 +101,7 @@ struct HabitCardView: View {
             } else {
                 ForEach(plans.prefix(2), id: \.self) { p in
                     Text("**Your plan:** If \(p.obstacle.trimmed.trimmingSuffix(".")), then \(p.plan.trimmed.trimmingSuffix("."))." )
-                        .font(.system(size: 12.5)).foregroundStyle(Theme.red.opacity(0.85))
+                        .font(.ui(12.5)).foregroundStyle(Theme.red.opacity(0.85))
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -117,14 +117,14 @@ struct HabitCardView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
                 HStack(spacing: 5) {
-                    if breaking { Image(systemName: "shield").font(.system(size: 11, weight: .semibold)) }
-                    Text((breaking ? "Leaving behind" : "I am becoming").uppercased()).font(.eyebrow).tracking(1.6)
+                    if breaking { Image(systemName: "shield").font(.ui(11, weight: .semibold)) }
+                    Text(caps(breaking ? "Leaving behind" : "I am becoming")).font(.eyebrow).capsTracking(1.6)
                 }
                 .foregroundStyle(breaking ? accent : Theme.faint)
                 Spacer()
                 if let onEdit {
                     Button { onEdit(h) } label: {
-                        Image(systemName: "pencil").font(.system(size: 13)).foregroundStyle(Theme.faint)
+                        Image(systemName: "pencil").font(.ui(13)).foregroundStyle(Theme.faint)
                             .frame(width: 32, height: 32).background(Theme.panel, in: Circle())
                     }
                     .accessibilityLabel("Edit habit")
@@ -134,12 +134,12 @@ struct HabitCardView: View {
 
             Text(h.title).font(.serif(21)).foregroundStyle(Theme.ink).lineLimit(3)
             if let g = h.goal?.title {
-                Text("→ \(g)").font(.system(size: 12.5, weight: .medium)).foregroundStyle(Theme.gold).padding(.top, 4)
+                Text("→ \(g)").font(.ui(12.5, weight: .medium)).foregroundStyle(Theme.gold).padding(.top, 4)
             }
             WeekStripView(days: item.weekStrip, accent: accent) { sheet = .edit($0) }
             if let wp {
                 Text(weekCopy(wp))
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.ui(12, weight: .medium))
                     .foregroundStyle(wp.remaining > 0 && wp.obligatedToday ? Theme.red : Theme.muted)
                     .padding(.top, 8)
             }
@@ -188,9 +188,9 @@ struct HabitCardView: View {
 
     private func cueView(_ cue: (String, String?)) -> some View {
         HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "bolt").font(.system(size: 12)).foregroundStyle(Theme.faint).padding(.top, 2)
+            Image(systemName: "bolt").font(.ui(12)).foregroundStyle(Theme.faint).padding(.top, 2)
             (Text(cue.0).fontWeight(.medium).foregroundStyle(Theme.ink) + Text(cue.1 ?? "").foregroundStyle(Theme.ink2))
-                .font(.system(size: 13))
+                .font(.ui(13))
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 14).padding(.vertical, 11)
@@ -204,7 +204,7 @@ struct HabitCardView: View {
             HStack(spacing: 8) {
                 Image(systemName: "sparkles").foregroundStyle(Theme.accent)
                 (Text("This milestone’s ready — ") + Text("take the Automaticity Check").fontWeight(.semibold) + Text(" to unlock your next step"))
-                    .font(.system(size: 13)).foregroundStyle(Theme.ink).multilineTextAlignment(.leading)
+                    .font(.ui(13)).foregroundStyle(Theme.ink).multilineTextAlignment(.leading)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 12).padding(.vertical, 10)
@@ -215,7 +215,7 @@ struct HabitCardView: View {
 
     private var votedZone: some View {
         VStack(spacing: 0) {
-            Image(systemName: "checkmark").font(.system(size: 22, weight: .bold)).foregroundStyle(.white)
+            Image(systemName: "checkmark").font(.ui(22, weight: .bold)).foregroundStyle(.white)
                 .frame(width: 52, height: 52).background(Theme.green, in: Circle())
                 .shadow(color: Theme.green.opacity(0.3), radius: 8, y: 6)
                 .padding(.bottom, 14)
@@ -227,18 +227,18 @@ struct HabitCardView: View {
                 Text("“\(why)”").font(.serif(14.5, italic: true)).foregroundStyle(Theme.ink2)
                     .multilineTextAlignment(.center).lineLimit(4).padding(.top, 4).frame(maxWidth: 280)
                 if let g = h.goal?.title {
-                    Text("One step closer to: \(g)").font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.gold)
+                    Text("One step closer to: \(g)").font(.ui(12, weight: .medium)).foregroundStyle(Theme.gold)
                         .multilineTextAlignment(.center).padding(.top, 8).frame(maxWidth: 280)
                 }
             } else {
-                Text(doneSubtitle).font(.system(size: 13.5)).foregroundStyle(Theme.ink2).multilineTextAlignment(.center).frame(maxWidth: 270)
+                Text(doneSubtitle).font(.ui(13.5)).foregroundStyle(Theme.ink2).multilineTextAlignment(.center).frame(maxWidth: 270)
             }
 
             if goal > 0 {
                 VStack(spacing: 6) {
                     Tally(filled: min(reps, goal), total: goal, color: accent)
                     HStack {
-                        Text("\(min(reps, goal)) of \(goal) \(breaking ? "clean days" : "votes")").font(.system(size: 12)).foregroundStyle(Theme.muted)
+                        Text("\(min(reps, goal)) of \(goal) \(breaking ? "clean days" : "votes")").font(.ui(12)).foregroundStyle(Theme.muted)
                         Spacer()
                         Button("Undo") { clear(today) }.buttonStyle(LinkButtonStyle())
                     }
@@ -249,7 +249,7 @@ struct HabitCardView: View {
             }
             if checkDue { checkCTA.padding(.top, 12) }
             if let c = h.celebration?.trimmed.nonEmpty {
-                Text("🎉 \(c)").font(.system(size: 13)).foregroundStyle(Theme.ink2)
+                Text("🎉 \(c)").font(.ui(13)).foregroundStyle(Theme.ink2)
                     .frame(maxWidth: .infinity).padding(11).background(Theme.panel, in: RoundedRectangle(cornerRadius: 11))
                     .padding(.top, 12)
             }
@@ -270,13 +270,13 @@ struct HabitCardView: View {
 
     private var missedZone: some View {
         VStack(spacing: 0) {
-            Image(systemName: "shield.slash").font(.system(size: 20, weight: .semibold)).foregroundStyle(Theme.red)
+            Image(systemName: "shield.slash").font(.ui(20, weight: .semibold)).foregroundStyle(Theme.red)
                 .frame(width: 52, height: 52).background(Theme.red.opacity(0.1), in: Circle()).padding(.bottom, 14)
             Text(breaking ? "Relapse logged" : "Logged — not today").font(.serif(21)).foregroundStyle(Theme.ink).padding(.bottom, 6)
             Text(breaking
                  ? "One slip doesn’t erase your progress — your \(reps) clean \(reps == 1 ? "day" : "days") still stand. Never miss twice; tomorrow is the comeback."
                  : "An honest no is still data — your \(reps) \(reps == 1 ? "vote" : "votes") still stand. Never miss twice; tomorrow’s a fresh vote.")
-                .font(.system(size: 13.5)).foregroundStyle(Theme.ink2).multilineTextAlignment(.center).frame(maxWidth: 270)
+                .font(.ui(13.5)).foregroundStyle(Theme.ink2).multilineTextAlignment(.center).frame(maxWidth: 270)
             if JSONText.strings(item.todayLog?.missReasons).isEmpty {
                 Button("What got in the way?") { sheet = .reason(today) }.buttonStyle(LinkButtonStyle(color: Theme.red)).padding(.top, 10)
             }
@@ -292,7 +292,7 @@ struct HabitCardView: View {
             HStack {
                 Eyebrow(sectionLabel, color: failSafe ? Theme.accent : Theme.faint)
                 Spacer()
-                Text("Phase \(item.phase?.phaseNumber ?? 1)").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                Text("Phase \(item.phase?.phaseNumber ?? 1)").font(.ui(12)).foregroundStyle(Theme.faint)
             }
             .padding(.bottom, 12)
             if checkDue { checkCTA.padding(.bottom, 12) }
@@ -303,7 +303,7 @@ struct HabitCardView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Tally(filled: min(reps, goal), total: goal, color: accent)
                     Text("\(min(reps, goal)) of \(goal) \(breaking ? "clean days toward breaking free" : "votes toward who you’re becoming")")
-                        .font(.system(size: 12)).foregroundStyle(Theme.muted)
+                        .font(.ui(12)).foregroundStyle(Theme.muted)
                 }
                 .padding(.top, 18)
             }
@@ -313,7 +313,7 @@ struct HabitCardView: View {
                     Text(failSafe
                          ? (breaking ? "Used the 2-minute resist today. Back to full strength tomorrow." : "Fail-safe is on for today. Back to the full version tomorrow.")
                          : (breaking ? "Urge hit but you held? Log it as a resist." : "Too much today? Switch to fail-safe."))
-                        .font(.system(size: 12.5)).foregroundStyle(Theme.ink2)
+                        .font(.ui(12.5)).foregroundStyle(Theme.ink2)
                 }
                 .toggleStyle(LeadingSwitch(tint: Theme.accent))
                 .padding(.top, 16)
@@ -324,7 +324,7 @@ struct HabitCardView: View {
                     .buttonStyle(LinkButtonStyle(color: Theme.faint)).frame(maxWidth: .infinity).padding(.top, 12)
             }
             Button { confirmPause = true } label: {
-                Label("Too much right now? Pause this habit", systemImage: "pause.circle").font(.system(size: 12))
+                Label("Too much right now? Pause this habit", systemImage: "pause.circle").font(.ui(12))
             }
             .foregroundStyle(Theme.faint).frame(maxWidth: .infinity).padding(.top, 10)
         }
@@ -339,21 +339,21 @@ struct HabitCardView: View {
 
     private var holdPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(failSafe ? h.failSafeAction : target).font(.system(size: 16.5, weight: .semibold)).foregroundStyle(Theme.ink).padding(.bottom, 4)
+            Text(failSafe ? h.failSafeAction : target).font(.ui(16.5, weight: .semibold)).foregroundStyle(Theme.ink).padding(.bottom, 4)
             if failSafe {
                 Text(breaking ? "Feeling the urge and holding is the vote. The 2-minute resist always counts." : "Showing up is the vote. The 2-minute version never scales away.")
-                    .font(.system(size: 12.5)).foregroundStyle(Theme.accent).padding(.bottom, 16)
+                    .font(.ui(12.5)).foregroundStyle(Theme.accent).padding(.bottom, 16)
             } else if let finishLine {
-                Text("\(breaking ? "Clean when" : "Done when") \(finishLine)").font(.system(size: 12.5)).foregroundStyle(Theme.muted).padding(.bottom, 16)
+                Text("\(breaking ? "Clean when" : "Done when") \(finishLine)").font(.ui(12.5)).foregroundStyle(Theme.muted).padding(.bottom, 16)
             } else {
                 Spacer().frame(height: 12)
             }
             if !failSafe, let b = h.temptationBundle?.trimmed.nonEmpty {
                 Label(breaking ? "The cost: \(b)" : "Only while \(b)", systemImage: "sparkles")
-                    .font(.system(size: 12.5)).foregroundStyle(Color(hex: 0x5B4B86))
+                    .font(.ui(12.5)).foregroundStyle(Theme.pausedInk)
                     .padding(.horizontal, 11).padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(hex: 0xEFEAF7), in: RoundedRectangle(cornerRadius: 10))
+                    .background(Theme.pausedBg, in: RoundedRectangle(cornerRadius: 10))
                     .padding(.bottom, 16)
             }
             holdButton
@@ -369,7 +369,7 @@ struct HabitCardView: View {
             Theme.button
             GeometryReader { g in Color.white.opacity(0.15).frame(width: g.size.width * holdProgress) }
             Label(holding ? "Keep holding…" : breaking ? "Hold to log a clean day" : "Hold to cast your vote", systemImage: "target")
-                .font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.buttonText)
+                .font(.ui(15, weight: .semibold)).foregroundStyle(Theme.buttonText)
                 .frame(maxWidth: .infinity)
         }
         .frame(height: 52)
@@ -395,9 +395,9 @@ struct HabitCardView: View {
 
     private var yesNoPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(h.checkQuestion?.trimmed.nonEmpty ?? target).font(.system(size: 16.5, weight: .semibold)).foregroundStyle(Theme.ink).padding(.bottom, 4)
+            Text(h.checkQuestion?.trimmed.nonEmpty ?? target).font(.ui(16.5, weight: .semibold)).foregroundStyle(Theme.ink).padding(.bottom, 4)
             if let finishLine {
-                Text("\(breaking ? "Clean when" : "Yes when") \(finishLine)").font(.system(size: 12.5)).foregroundStyle(Theme.muted)
+                Text("\(breaking ? "Clean when" : "Yes when") \(finishLine)").font(.ui(12.5)).foregroundStyle(Theme.muted)
             }
             HStack(spacing: 8) {
                 Button { complete() } label: { Label("Yes", systemImage: "checkmark") }.buttonStyle(PrimaryButtonStyle())
@@ -411,9 +411,9 @@ struct HabitCardView: View {
 
     private var taperPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(target).font(.system(size: 16.5, weight: .semibold)).foregroundStyle(Theme.ink).padding(.bottom, 4)
+            Text(target).font(.ui(16.5, weight: .semibold)).foregroundStyle(Theme.ink).padding(.bottom, 4)
             Text("Limit today: \(item.phase?.dailyLimit ?? 0). Log honestly — under the line is a vote.")
-                .font(.system(size: 12.5)).foregroundStyle(Theme.muted).padding(.bottom, 16)
+                .font(.ui(12.5)).foregroundStyle(Theme.muted).padding(.bottom, 16)
             Stepper3(value: $qty).frame(maxWidth: .infinity).padding(.bottom, 16)
             Button { logTaper() } label: { Label("Log today’s count", systemImage: "checkmark") }.buttonStyle(PrimaryButtonStyle())
         }

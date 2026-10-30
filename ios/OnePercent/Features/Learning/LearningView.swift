@@ -9,12 +9,7 @@ struct LearningView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Picker("Learning", selection: $page) {
-                        Text("Habit Coach").tag(Page.coach)
-                        Text("Theory").tag(Page.theory)
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.top, 12)
+                    picker.pickerStyle(.segmented).labelsHidden().padding(.top, 12).phoneOnly()
                     switch page {
                     case .coach: CoachSlot.make()
                     case .theory: TheoryView()
@@ -25,6 +20,14 @@ struct LearningView: View {
             }
             .background(Theme.bg)
             .hidePhoneNavBar()
+            .macToolbarPicker { picker }
+        }
+    }
+
+    private var picker: some View {
+        Picker("Learning", selection: $page) {
+            Text("Habit Coach").tag(Page.coach)
+            Text("Theory").tag(Page.theory)
         }
     }
 }
@@ -37,7 +40,7 @@ enum CoachSlot {
         if let f = factory {
             f()
         } else {
-            Text("The habit coach arrives with the on-device AI.").font(.system(size: 14)).foregroundStyle(Theme.faint)
+            Text("The habit coach arrives with the on-device AI.").font(.ui(14)).foregroundStyle(Theme.faint)
         }
     }
 }

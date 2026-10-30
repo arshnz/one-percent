@@ -42,7 +42,7 @@ struct MomentumView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    header
+                    header.phoneOnly()
                     if let data { content(data) } else { ProgressView().frame(maxWidth: .infinity, minHeight: 200) }
                 }
                 .padding(.horizontal, 16)
@@ -60,6 +60,24 @@ struct MomentumView: View {
                     if data.habitCount == 0 {
                         empty
                     } else {
+                        #if os(macOS)
+                        // A dashboard: the window is wide, so use it.
+                        CompoundCurveCard(data: data)
+                        HStack(alignment: .top, spacing: 16) {
+                            Group { if let insights { insights } else { InsightsCardView(profile: profiles.first) } }
+                                .frame(maxWidth: .infinity)
+                            VStack(alignment: .leading, spacing: 16) {
+                                primaryStats(data)
+                                details(data)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        habitByHabit(data)
+                        HStack(alignment: .top, spacing: 16) {
+                            MeasuredSeriesView(data: data, extra: measuredExtra).frame(maxWidth: .infinity)
+                            CheckInHistoryView(checkIns: Array(checkIns.prefix(20))).frame(maxWidth: .infinity)
+                        }
+                        #else
                         CompoundCurveCard(data: data)
                         if let insights { insights } else { InsightsCardView(profile: profiles.first) }
                         primaryStats(data)
@@ -67,18 +85,19 @@ struct MomentumView: View {
                         habitByHabit(data)
                         MeasuredSeriesView(data: data, extra: measuredExtra)
                         CheckInHistoryView(checkIns: Array(checkIns.prefix(20)))
+                        #endif
                     }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Image(systemName: "chart.bar").font(.system(size: 12))
+                Image(systemName: "chart.bar").font(.ui(12))
                 Eyebrow("Momentum")
             }
             .foregroundStyle(Theme.faint)
-            Text("Who you’re becoming").font(.system(size: 26, weight: .semibold)).tracking(-0.5).foregroundStyle(Theme.ink)
-            Text("Every rep is a vote. Here’s what they’re compounding into.").font(.system(size: 14)).foregroundStyle(Theme.ink2)
+            Text("Who you’re becoming").font(.ui(26, weight: .semibold)).tracking(-0.5).foregroundStyle(Theme.ink)
+            Text("Every rep is a vote. Here’s what they’re compounding into.").font(.ui(14)).foregroundStyle(Theme.ink2)
         }
         .padding(.top, 12)
     }
@@ -87,7 +106,7 @@ struct MomentumView: View {
         VStack(spacing: 8) {
             Text("No votes cast yet").font(.serif(18)).foregroundStyle(Theme.ink)
             Text("Engineer a habit and start casting votes — your curve starts climbing from the first rep.")
-                .font(.system(size: 14)).foregroundStyle(Theme.ink2).multilineTextAlignment(.center)
+                .font(.ui(14)).foregroundStyle(Theme.ink2).multilineTextAlignment(.center)
             if let onAddHabit {
                 Button("Open the Architect", action: onAddHabit).buttonStyle(PrimaryButtonStyle()).padding(.top, 12)
             }
@@ -109,13 +128,13 @@ struct MomentumView: View {
     private func bigStat(_ label: String, icon: String, value: String, unit: String?, hint: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 5) {
-                Image(systemName: icon).font(.system(size: 11))
-                Text(label.uppercased()).font(.system(size: 10, weight: .semibold)).tracking(1).lineLimit(1).minimumScaleFactor(0.8)
+                Image(systemName: icon).font(.ui(11))
+                Text(caps(label)).font(.ui(10, weight: .semibold)).capsTracking(1).lineLimit(1).minimumScaleFactor(0.8)
             }
             .foregroundStyle(Theme.faint)
-            (Text(value) + Text(unit ?? "").font(.system(size: 20)).foregroundStyle(Theme.faint))
-                .font(.system(size: 40, weight: .semibold)).tracking(-1).foregroundStyle(Theme.ink)
-            Text(hint).font(.system(size: 12)).foregroundStyle(Theme.ink2).fixedSize(horizontal: false, vertical: true)
+            (Text(value) + Text(unit ?? "").font(.ui(20)).foregroundStyle(Theme.faint))
+                .font(.ui(40, weight: .semibold)).tracking(-1).foregroundStyle(Theme.ink)
+            Text(hint).font(.ui(12)).foregroundStyle(Theme.ink2).fixedSize(horizontal: false, vertical: true)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -141,9 +160,9 @@ struct MomentumView: View {
 
     private func smallStat(_ label: String, icon: String, value: String, hint: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Label(label.uppercased(), systemImage: icon).font(.system(size: 10, weight: .medium)).foregroundStyle(Theme.faint)
-            Text(value).font(.system(size: 19, weight: .semibold)).foregroundStyle(Theme.ink).lineLimit(1).minimumScaleFactor(0.7)
-            Text(hint).font(.system(size: 11.5)).foregroundStyle(Theme.faint)
+            Label(caps(label), systemImage: icon).font(.ui(10, weight: .medium)).foregroundStyle(Theme.faint)
+            Text(value).font(.ui(19, weight: .semibold)).foregroundStyle(Theme.ink).lineLimit(1).minimumScaleFactor(0.7)
+            Text(hint).font(.ui(11.5)).foregroundStyle(Theme.faint)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -154,14 +173,22 @@ struct MomentumView: View {
         VStack(alignment: .leading, spacing: 12) {
             Eyebrow("Habit by habit", color: Theme.ink2)
             GridLegend()
+            #if os(macOS)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 440), spacing: 16, alignment: .top)], alignment: .leading, spacing: 16) {
+                ForEach(d.trajectory) { t in
+                    HabitMomentumCard(t: t, onEdit: onEditHabit, footer: habitFooter?(t.habit))
+                }
+            }
+            #else
             ForEach(d.trajectory) { t in
                 HabitMomentumCard(t: t, onEdit: onEditHabit, footer: habitFooter?(t.habit))
             }
+            #endif
         }
     }
 }
 
-private struct HabitMomentumCard: View {
+struct HabitMomentumCard: View {
     let t: MomentumData.HabitTrajectory
     let onEdit: ((Habit) -> Void)?
     let footer: AnyView?
@@ -174,17 +201,17 @@ private struct HabitMomentumCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     if breaking {
                         Label("Breaking" + (t.habit.breakMode == "taper" ? " · taper" : ""), systemImage: "shield")
-                            .font(.system(size: 10, weight: .semibold)).foregroundStyle(Theme.breakAccent)
+                            .font(.ui(10, weight: .semibold)).foregroundStyle(Theme.breakAccent)
                             .padding(.horizontal, 7).padding(.vertical, 2).background(Theme.breakAccent.opacity(0.08), in: Capsule())
                     }
-                    Text(t.habit.title).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.ink).lineLimit(2)
+                    Text(t.habit.title).font(.ui(14, weight: .medium)).foregroundStyle(Theme.ink).lineLimit(2)
                 }
                 Spacer()
                 Text(t.paused ? "Paused" : "Showing up \(t.consistency.rhythm)%")
-                    .font(.system(size: 12))
+                    .font(.ui(12))
                     .padding(.horizontal, 8).padding(.vertical, 3)
-                    .foregroundStyle(t.paused ? Color(hex: 0x5B4B86) : Theme.ink2)
-                    .background(t.paused ? Color(hex: 0xEFEAF7) : Theme.panel, in: Capsule())
+                    .foregroundStyle(t.paused ? Theme.pausedInk : Theme.ink2)
+                    .background(t.paused ? Theme.pausedBg : Theme.panel, in: Capsule())
             }
             Sparkline(habit: t.curveHabit, color: color)
             ContributionGridView(cells: t.contributions)
@@ -207,7 +234,7 @@ private struct HabitMomentumCard: View {
                     FlowLayout(spacing: 6) {
                         ForEach(t.topObstacles, id: \.self) { o in
                             (Text(o.reason) + Text(" ×\(o.count)").foregroundStyle(Theme.faint))
-                                .font(.system(size: 12)).foregroundStyle(Theme.ink2)
+                                .font(.ui(12)).foregroundStyle(Theme.ink2)
                                 .padding(.horizontal, 8).padding(.vertical, 3)
                                 .background(Theme.bg, in: Capsule()).overlay(Capsule().stroke(Theme.line))
                         }
@@ -215,11 +242,11 @@ private struct HabitMomentumCard: View {
                         // plan is the next setback plan waiting to be written.
                         if let onEdit, unplanned != nil {
                             Button("Make a plan for this →") { onEdit(t.habit) }
-                                .font(.system(size: 12, weight: .medium)).foregroundStyle(Theme.gold)
+                                .font(.ui(12, weight: .medium)).foregroundStyle(Theme.gold)
                         }
                     }
                 }
-                if let p = t.missPattern { Text(p).font(.system(size: 12)).italic().foregroundStyle(Theme.faint) }
+                if let p = t.missPattern { Text(p).font(.ui(12)).italic().foregroundStyle(Theme.faint) }
             }
         }
     }
@@ -238,14 +265,14 @@ private struct HabitMomentumCard: View {
                 HStack(spacing: 6) {
                     if i > 0 { Text("→").foregroundStyle(Theme.faint) }
                     HStack(spacing: 5) {
-                        Image(systemName: icon(p.status)).font(.system(size: 10, weight: .semibold)).foregroundStyle(tone(p.status))
+                        Image(systemName: icon(p.status)).font(.ui(10, weight: .semibold)).foregroundStyle(tone(p.status))
                         Text("Phase \(p.phaseNumber)")
                         if p.status == "ready" { Text("· ready for check").foregroundStyle(Theme.faint) }
                         if p.status == "graduated", let g = p.graduatedAt {
                             Text("· \(g.formatted(.dateTime.month(.abbreviated).day()))").foregroundStyle(Theme.faint)
                         }
                     }
-                    .font(.system(size: 12))
+                    .font(.ui(12))
                     .foregroundStyle(p.status == "locked" ? Theme.faint : Theme.ink)
                     .padding(.horizontal, 10).padding(.vertical, 4)
                     .background(tone(p.status).opacity(p.status == "locked" ? 0 : 0.1), in: Capsule())
@@ -291,7 +318,7 @@ struct Sparkline: View {
                 .chartXAxis(.hidden).chartYAxis(.hidden)
                 .chartYScale(domain: (actual.map(\.value).min()!)...(max(actual.map(\.value).max()!, actual.map(\.value).min()! + 0.0001)))
                 .frame(height: 22)
-                Text(Compound.format(actual.last!.value)).font(.system(size: 14, weight: .semibold)).monospacedDigit().foregroundStyle(Theme.ink)
+                Text(Compound.format(actual.last!.value)).font(.ui(14, weight: .semibold)).monospacedDigit().foregroundStyle(Theme.ink)
             }
         }
     }
@@ -322,7 +349,7 @@ struct MeasuredSeriesView: View {
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
                     Eyebrow("What you’ve measured", color: Theme.ink2)
-                    Text("Not the curve above — these are the raw numbers, drawn straight, nothing modelled.").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    Text("Not the curve above — these are the raw numbers, drawn straight, nothing modelled.").font(.ui(12)).foregroundStyle(Theme.faint)
                 }
                 if !lines.isEmpty { automaticity(lines) }
                 if ratings.count >= 3 { weekly(ratings) }
@@ -333,13 +360,13 @@ struct MeasuredSeriesView: View {
 
     private func automaticity(_ lines: [AutoLine]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("How automatic it feels").font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.ink)
+            Text("How automatic it feels").font(.ui(14, weight: .medium)).foregroundStyle(Theme.ink)
             Text("Your SRBAI score each time a phase came up for a check. \(String(format: "%.1f", Automaticity.passThreshold)) graduates it.")
-                .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                .font(.ui(12)).foregroundStyle(Theme.faint)
             Chart {
                 RuleMark(y: .value("Pass", Automaticity.passThreshold))
                     .foregroundStyle(Theme.green.opacity(0.7)).lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                    .annotation(position: .top, alignment: .trailing) { Text("pass").font(.system(size: 8)).foregroundStyle(Theme.green) }
+                    .annotation(position: .top, alignment: .trailing) { Text("pass").font(.ui(8)).foregroundStyle(Theme.green) }
                 ForEach(lines) { l in
                     ForEach(l.points, id: \.createdAt) { p in
                         LineMark(x: .value("When", p.createdAt), y: .value("SRBAI", p.mean), series: .value("Habit", l.habit.uid))
@@ -369,9 +396,9 @@ struct MeasuredSeriesView: View {
         let avg = Double(ratings.map(\.rating).reduce(0, +)) / Double(ratings.count)
         let skipped = slots.count - ratings.count
         return VStack(alignment: .leading, spacing: 6) {
-            Text("How the week felt").font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.ink)
+            Text("How the week felt").font(.ui(14, weight: .medium)).foregroundStyle(Theme.ink)
             Text("Your own 1–10 rating at each weekly check-in. Averaging \(String(format: "%.1f", avg))" + (skipped > 0 ? " across \(ratings.count) of \(slots.count) weeks." : "."))
-                .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                .font(.ui(12)).foregroundStyle(Theme.faint)
             Chart(slots, id: \.0) { week, rating in
                 BarMark(x: .value("Week", week), y: .value("Rating", rating ?? 0))
                     .foregroundStyle(rating == nil ? Color.clear : Theme.green.opacity(0.7))
@@ -384,7 +411,7 @@ struct MeasuredSeriesView: View {
             HStack {
                 Text(DateText.formatted(slots.first!.0, "MMM yyyy")); Spacer(); Text(DateText.formatted(slots.last!.0, "MMM yyyy"))
             }
-            .font(.system(size: 10)).foregroundStyle(Theme.faint)
+            .font(.ui(10)).foregroundStyle(Theme.faint)
         }
         .padding(16)
         .card()
@@ -398,20 +425,20 @@ struct CheckInHistoryView: View {
     var body: some View {
         if !checkIns.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                Label("Check-in history", systemImage: "calendar.badge.checkmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.ink2)
+                Label("Check-in history", systemImage: "calendar.badge.checkmark").font(.ui(13, weight: .semibold)).foregroundStyle(Theme.ink2)
                 ForEach(checkIns) { c in
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
-                            Text("Week of \(DateText.shortMonthDay(c.weekOf))").font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.ink)
+                            Text("Week of \(DateText.shortMonthDay(c.weekOf))").font(.ui(14, weight: .medium)).foregroundStyle(Theme.ink)
                             Spacer()
                             if c.status == "skipped" {
-                                Text("Skipped").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                                Text("Skipped").font(.ui(12)).foregroundStyle(Theme.faint)
                             } else if let r = c.rating {
-                                Text("\(r)/10").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.green)
+                                Text("\(r)/10").font(.ui(12, weight: .semibold)).foregroundStyle(Theme.green)
                             }
                         }
-                        if let s = c.aiSummary { Text(s).font(.system(size: 13)).foregroundStyle(Theme.ink2) }
-                        if let w = c.tinyVictory { Text("Win: \(w)").font(.system(size: 12.5)).foregroundStyle(Theme.muted) }
+                        if let s = c.aiSummary { Text(s).font(.ui(13)).foregroundStyle(Theme.ink2) }
+                        if let w = c.tinyVictory { Text("Win: \(w)").font(.ui(12.5)).foregroundStyle(Theme.muted) }
                     }
                     .padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)

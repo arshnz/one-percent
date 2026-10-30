@@ -43,11 +43,12 @@ struct BodyView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 4) {
                         Label("THE BODY", systemImage: "waveform.path.ecg").font(.eyebrow).tracking(1.4).foregroundStyle(Theme.faint)
-                        Text("What your body recorded").font(.system(size: 26, weight: .semibold)).tracking(-0.5).foregroundStyle(Theme.ink)
+                        Text("What your body recorded").font(.ui(26, weight: .semibold)).tracking(-0.5).foregroundStyle(Theme.ink)
                         Text("Measured while you slept and moved — nothing here was remembered, rated or typed in. The charts are the evidence; the reading of them is above.")
-                            .font(.system(size: 14)).foregroundStyle(Theme.ink2)
+                            .font(.ui(14)).foregroundStyle(Theme.ink2)
                     }
                     .padding(.top, 12)
+                    .phoneOnly()
 
                     healthBar(samples)
 
@@ -55,7 +56,7 @@ struct BodyView: View {
                         VStack(spacing: 8) {
                             Text("Nothing recorded yet").font(.serif(18))
                             Text("Connect Apple Health and your sleep, resting heart rate, HRV and steps land here automatically — from an Apple Watch, Garmin Connect, or any app that writes to Health.")
-                                .font(.system(size: 14)).foregroundStyle(Theme.ink2).multilineTextAlignment(.center)
+                                .font(.ui(14)).foregroundStyle(Theme.ink2).multilineTextAlignment(.center)
                         }
                         .padding(28).frame(maxWidth: .infinity).card()
                     } else {
@@ -64,11 +65,17 @@ struct BodyView: View {
                             Eyebrow("The raw record", color: Theme.ink2)
                             Spacer()
                             Picker("Range", selection: $rangeDays) { ForEach(Self.ranges, id: \.1) { Text($0.0).tag($0.1) } }
-                                .pickerStyle(.segmented).frame(width: 200)
+                                .pickerStyle(.segmented).labelsHidden().frame(width: 200)
                         }
-                        Text("Every day as it was measured. Nothing smoothed, nothing filled in.").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                        Text("Every day as it was measured. Nothing smoothed, nothing filled in.").font(.ui(12)).foregroundStyle(Theme.faint)
+                        #if os(macOS)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 460), spacing: 16, alignment: .top)], spacing: 16) {
+                            panels(slots(samples))
+                        }
+                        #else
                         panels(slots(samples))
-                        Text("Days with nothing recorded are left blank rather than filled in.").font(.system(size: 11)).foregroundStyle(Theme.faint)
+                        #endif
+                        Text("Days with nothing recorded are left blank rather than filled in.").font(.ui(11)).foregroundStyle(Theme.faint)
                     }
                 }
                 .padding(.horizontal, 16).padding(.bottom, 32)
@@ -102,15 +109,15 @@ struct BodyView: View {
             Image(systemName: "heart.fill").foregroundStyle(.pink)
             VStack(alignment: .leading, spacing: 2) {
                 Text(Self.healthLine)
-                    .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.ink)
+                    .font(.ui(13, weight: .medium)).foregroundStyle(Theme.ink)
                 if let first = samples.first?.date {
-                    Text("\(samples.count) days · history from \(DateText.dayMonthYear(first))").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    Text("\(samples.count) days · history from \(DateText.dayMonthYear(first))").font(.ui(12)).foregroundStyle(Theme.faint)
                 }
             }
             Spacer()
             #if os(iOS)
             Button(syncing ? "Syncing…" : HealthSync.lastSync == nil ? "Connect" : "Sync") { Task { await sync() } }
-                .font(.system(size: 13, weight: .semibold)).disabled(syncing || !HealthSync.isAvailable)
+                .font(.ui(13, weight: .semibold)).disabled(syncing || !HealthSync.isAvailable)
             #endif
         }
         .padding(14).card()
@@ -167,13 +174,13 @@ private struct PanelShell<Content: View>: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(title).font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.ink)
-                    Text(hint).font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    Text(title).font(.ui(15, weight: .semibold)).foregroundStyle(Theme.ink)
+                    Text(hint).font(.ui(12)).foregroundStyle(Theme.faint)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 1) {
-                    if let latest { Text(latest).font(.system(size: 18, weight: .semibold)).foregroundStyle(Theme.ink) }
-                    if let average { Text("avg \(average)").font(.system(size: 10)).foregroundStyle(Theme.faint) }
+                    if let latest { Text(latest).font(.ui(18, weight: .semibold)).foregroundStyle(Theme.ink) }
+                    if let average { Text("avg \(average)").font(.ui(10)).foregroundStyle(Theme.faint) }
                 }
             }
             content.frame(height: 150)
@@ -310,7 +317,7 @@ struct WearableSeriesView: View {
         let slots = LocalDate.range(from, today).map { BodyView.Slot(date: $0, day: byDate[$0]) }
         if slots.contains(where: { $0.day != nil }) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("What your body recorded, last 90 days").font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.ink)
+                Text("What your body recorded, last 90 days").font(.ui(14, weight: .medium)).foregroundStyle(Theme.ink)
                 if slots.contains(where: { $0.day?.sleepMinutes != nil }) { SleepPanel(slots: slots) }
                 if slots.contains(where: { $0.day?.restingHr != nil }) {
                     LinePanel(title: "Resting heart rate", hint: "Against your 14-day baseline.", slots: slots, value: \.restingHr, unit: "bpm", color: Theme.accent)
@@ -335,11 +342,11 @@ struct FindingsPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Label("What the record shows", systemImage: "sparkle.magnifyingglass").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.ink2)
+            Label("What the record shows", systemImage: "sparkle.magnifyingglass").font(.ui(13, weight: .semibold)).foregroundStyle(Theme.ink2)
             if let result {
                 if result.findings.isEmpty {
                     Text(result.days < BodyInsights.minDays ? "Needs at least \(BodyInsights.minDays) days of data before it will say anything." : "Nothing stands out yet.")
-                        .font(.system(size: 14)).foregroundStyle(Theme.ink2)
+                        .font(.ui(14)).foregroundStyle(Theme.ink2)
                 }
                 ForEach(Self.groups, id: \.0) { kind, title in
                     let fs = result.findings.filter { $0.kind == kind }
@@ -347,17 +354,17 @@ struct FindingsPanel: View {
                         Eyebrow(title)
                         ForEach(fs) { f in
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(f.headline).font(.system(size: 15, weight: .medium)).foregroundStyle(Theme.ink)
-                                Text(f.detail).font(.system(size: 13)).foregroundStyle(Theme.ink2)
-                                if let p = f.pValue { Text("p = \(Stats.toFixed(p, 3)) · tested, then corrected for how many things were tested").font(.system(size: 10)).foregroundStyle(Theme.faint) }
+                                Text(f.headline).font(.ui(15, weight: .medium)).foregroundStyle(Theme.ink)
+                                Text(f.detail).font(.ui(13)).foregroundStyle(Theme.ink2)
+                                if let p = f.pValue { Text("p = \(Stats.toFixed(p, 3)) · tested, then corrected for how many things were tested").font(.ui(10)).foregroundStyle(Theme.faint) }
                             }
                         }
                     }
                 }
                 Text("Every pattern here passed a permutation test with a false-discovery correction. They are associations in your own data, not diagnoses.")
-                    .font(.system(size: 11)).foregroundStyle(Theme.faint)
+                    .font(.ui(11)).foregroundStyle(Theme.faint)
             } else {
-                HStack { ProgressView(); Text("Reading a year of data…").font(.system(size: 13)).foregroundStyle(Theme.faint) }
+                HStack { ProgressView(); Text("Reading a year of data…").font(.ui(13)).foregroundStyle(Theme.faint) }
             }
         }
         .padding(18).card()
@@ -434,28 +441,28 @@ struct HabitEffectCard: View {
                                 Button("The day after") { link(m, lag: 1) }
                             }
                         }
-                    } label: { Image(systemName: "plus.circle").font(.system(size: 15)) }
+                    } label: { Image(systemName: "plus.circle").font(.ui(15)) }
                     .foregroundStyle(Theme.faint)
                     .accessibilityLabel("Track a body metric against this habit")
                 }
                 if links.isEmpty {
-                    Text("Compare the days you did this against the days you didn’t.").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    Text("Compare the days you did this against the days you didn’t.").font(.ui(12)).foregroundStyle(Theme.faint)
                 }
                 ForEach(results) { r in
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: r.verdict == .insufficient ? "hourglass" : r.verdict == .noEffect ? "minus" : (r.difference < 0 ? "arrow.down.right" : "arrow.up.right"))
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.ui(12, weight: .semibold))
                             .foregroundStyle(r.verdict == .associated ? (r.improved == true ? Theme.green : Theme.amber) : Theme.faint)
                             .frame(width: 16).padding(.top, 2)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(r.metric.label + (r.lagDays == 1 ? " · next day" : "")).font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.ink)
-                            Text(r.sentence).font(.system(size: 12.5)).foregroundStyle(Theme.ink2)
+                            Text(r.metric.label + (r.lagDays == 1 ? " · next day" : "")).font(.ui(13, weight: .medium)).foregroundStyle(Theme.ink)
+                            Text(r.sentence).font(.ui(12.5)).foregroundStyle(Theme.ink2)
                             if r.verdict != .insufficient {
-                                Text("\(r.hit.n) days you did it vs \(r.miss.n) you didn’t · p=\(Stats.toFixed(r.pValue, 3))").font(.system(size: 10)).foregroundStyle(Theme.faint)
+                                Text("\(r.hit.n) days you did it vs \(r.miss.n) you didn’t · p=\(Stats.toFixed(r.pValue, 3))").font(.ui(10)).foregroundStyle(Theme.faint)
                             }
                         }
                         Spacer(minLength: 0)
-                        Button { unlink(r.metric) } label: { Image(systemName: "xmark").font(.system(size: 10)) }
+                        Button { unlink(r.metric) } label: { Image(systemName: "xmark").font(.ui(10)) }
                             .foregroundStyle(Theme.faint).accessibilityLabel("Stop tracking \(r.metric.label)")
                     }
                 }

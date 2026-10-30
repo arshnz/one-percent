@@ -52,7 +52,7 @@ struct SettingsView: View {
                         Button("Notifications are off for One Percent — open Settings") {
                             if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                         }
-                        .font(.system(size: 13))
+                        .font(.ui(13))
                     }
                     if remindersOn && notificationStatus != .denied {
                         Toggle("Morning digest", isOn: $digestOn).tint(Theme.accent)
@@ -68,7 +68,7 @@ struct SettingsView: View {
                             LabeledContent("Next") {
                                 VStack(alignment: .trailing, spacing: 2) {
                                     Text(n.at.formatted(.dateTime.weekday(.abbreviated).hour().minute()))
-                                    Text(n.title).font(.system(size: 11)).foregroundStyle(Theme.faint).lineLimit(1)
+                                    Text(n.title).font(.ui(11)).foregroundStyle(Theme.faint).lineLimit(1)
                                 }
                             }
                         } else {
@@ -83,7 +83,7 @@ struct SettingsView: View {
                 #else
                 Section {
                     Text("Reminders come from your iPhone, so nothing arrives twice. Their times and switches are set there, in Settings.")
-                        .font(.system(size: 13)).foregroundStyle(Theme.ink2)
+                        .font(.ui(13)).foregroundStyle(Theme.ink2)
                 } header: {
                     Text("Notifications")
                 }
@@ -95,7 +95,7 @@ struct SettingsView: View {
                     TextField("e.g. I’m a dad of two, working long hours. I want to model good habits for my kids…", text: $personalContext, axis: .vertical)
                         .lineLimit(5...)
                         .onChange(of: personalContext) { if personalContext.count > 2000 { personalContext = String(personalContext.prefix(2000)) } }
-                    Text("\(personalContext.count) / 2000").font(.system(size: 11)).foregroundStyle(Theme.faint)
+                    Text("\(personalContext.count) / 2000").font(.ui(11)).foregroundStyle(Theme.faint)
                 } header: {
                     Text("AI personal context")
                 } footer: {

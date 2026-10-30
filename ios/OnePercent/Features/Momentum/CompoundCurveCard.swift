@@ -63,30 +63,30 @@ struct CompoundCurveCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Eyebrow("Your compound curve")
-                    Text(Compound.format(m.current)).font(.system(size: 38, weight: .semibold)).tracking(-1).foregroundStyle(Theme.ink)
+                    Text(Compound.format(m.current)).font(.ui(38, weight: .semibold)).tracking(-1).foregroundStyle(Theme.ink)
                         .contentTransition(.numericText())
                     if !m.actual.isEmpty && !m.starting && exponent > 0 {
-                        Text("1.01 raised to \(exponent) \(exponent == 1 ? "day" : "days") of showing up").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                        Text("1.01 raised to \(exponent) \(exponent == 1 ? "day" : "days") of showing up").font(.ui(12)).foregroundStyle(Theme.faint)
                     }
                 }
                 Spacer()
                 Picker("Range", selection: $rangeDays.animation()) {
                     ForEach(Self.ranges, id: \.1) { Text($0.0).tag($0.1) }
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.segmented).labelsHidden()
                 .frame(width: 140)
             }
 
             if m.actual.isEmpty {
                 Text("Nothing’s scheduled yet, so there’s no day for the curve to stand on.")
-                    .font(.system(size: 14)).foregroundStyle(Theme.ink2).frame(maxWidth: .infinity, minHeight: 160)
+                    .font(.ui(14)).foregroundStyle(Theme.ink2).frame(maxWidth: .infinity, minHeight: 160)
             } else {
                 chart(m).frame(height: 240)
                 summary(m)
                 legend(m)
                 if !m.starting && exponent > 0 { maths(m, exponent: exponent) }
             }
-            Text("This pictures compounding — it doesn’t measure you.").font(.system(size: 11)).italic().foregroundStyle(Theme.faint)
+            Text("This pictures compounding — it doesn’t measure you.").font(.ui(11)).italic().foregroundStyle(Theme.faint)
         }
         .padding(20)
         .card()
@@ -127,7 +127,7 @@ struct CompoundCurveCard: View {
             RuleMark(x: .value("Today", today))
                 .foregroundStyle(Theme.faint.opacity(0.4))
                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 3]))
-                .annotation(position: .top, alignment: .leading) { Text("today").font(.system(size: 9)).foregroundStyle(Theme.faint) }
+                .annotation(position: .top, alignment: .leading) { Text("today").font(.ui(9)).foregroundStyle(Theme.faint) }
             ForEach(Array(m.markers.enumerated()), id: \.offset) { _, mk in
                 PointMark(x: .value("Day", mk.day), y: .value("×", mk.value))
                     .foregroundStyle(Theme.green).symbolSize(40)
@@ -137,8 +137,8 @@ struct CompoundCurveCard: View {
                 PointMark(x: .value("Sel", sel.day), y: .value("×", sel.value)).foregroundStyle(Theme.accent)
                     .annotation(position: .top, spacing: 6, overflowResolution: .init(x: .fit(to: .chart), y: .disabled)) {
                         VStack(spacing: 1) {
-                            Text(Compound.format(sel.value)).font(.system(size: 12, weight: .semibold))
-                            Text(sel.title + (sel.note.map { " · \($0)" } ?? "")).font(.system(size: 10)).opacity(0.7)
+                            Text(Compound.format(sel.value)).font(.ui(12, weight: .semibold))
+                            Text(sel.title + (sel.note.map { " · \($0)" } ?? "")).font(.ui(10)).opacity(0.7)
                         }
                         .foregroundStyle(.white)
                         .padding(.horizontal, 8).padding(.vertical, 5)
@@ -152,7 +152,7 @@ struct CompoundCurveCard: View {
         .chartYAxis {
             AxisMarks(position: .trailing, values: (0...3).map { yMin + (yMax - yMin) * Double($0) / 3 }) { v in
                 AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [2, 4])).foregroundStyle(Theme.line)
-                AxisValueLabel { if let d = v.as(Double.self) { Text(Compound.format(d)).font(.system(size: 10)).foregroundStyle(Theme.faint) } }
+                AxisValueLabel { if let d = v.as(Double.self) { Text(Compound.format(d)).font(.ui(10)).foregroundStyle(Theme.faint) } }
             }
         }
         .chartXSelection(value: $selectedDay)
@@ -182,7 +182,7 @@ struct CompoundCurveCard: View {
             if let p = m.promise {
                 (Text("Nothing cast yet. Hit every scheduled day and you’d be at ") + Text(Compound.format(p.last!.value)).bold()
                  + Text(" by \(end) — the first rep starts the climb."))
-                    .font(.system(size: 14)).foregroundStyle(Theme.ink2)
+                    .font(.ui(14)).foregroundStyle(Theme.ink2)
             }
         } else {
             VStack(alignment: .leading, spacing: 4) {
@@ -191,10 +191,10 @@ struct CompoundCurveCard: View {
                  + (m.weeklyActive > 0 && m.fan.oneMoreEnd > m.fan.paceEnd
                     ? Text(" Show up one more day a week → ") + Text(Compound.format(m.fan.oneMoreEnd)).bold() + Text(".")
                     : Text("")))
-                    .font(.system(size: 14)).foregroundStyle(Theme.ink2)
+                    .font(.ui(14)).foregroundStyle(Theme.ink2)
                 if m.weeklyActive > 0 {
                     Text("The dashed lines assume you keep hitting \(data.consistency.rhythm)% of your days for a year — a projection, not a promise.")
-                        .font(.system(size: 12)).foregroundStyle(Theme.faint)
+                        .font(.ui(12)).foregroundStyle(Theme.faint)
                 }
             }
         }
@@ -209,7 +209,7 @@ struct CompoundCurveCard: View {
             if !m.starting { key("Every scheduled day (so far)", Theme.faint.opacity(0.55), dashed: true) }
             if !m.markers.isEmpty {
                 HStack(spacing: 5) { Circle().fill(Theme.green).frame(width: 7, height: 7); Text("Phase graduated") }
-                    .font(.system(size: 10)).foregroundStyle(Theme.faint)
+                    .font(.ui(10)).foregroundStyle(Theme.faint)
             }
         }
     }
@@ -221,7 +221,7 @@ struct CompoundCurveCard: View {
                 .frame(width: 14, height: 2)
             Text(label)
         }
-        .font(.system(size: 10)).foregroundStyle(Theme.faint)
+        .font(.ui(10)).foregroundStyle(Theme.faint)
     }
 
     private func maths(_ m: Model, exponent: Int) -> some View {
@@ -234,7 +234,7 @@ struct CompoundCurveCard: View {
                 }
                 Text("Built from your \(data.totalVotes) logged \(data.totalVotes == 1 ? "rep" : "reps"). Rest days and paused habits don’t count for or against you — the curve never drops on a miss, it just stops climbing.")
             }
-            .font(.system(size: 12.5)).foregroundStyle(Theme.ink2)
+            .font(.ui(12.5)).foregroundStyle(Theme.ink2)
             .padding(.top, 6)
         } label: {
             Eyebrow(showMaths ? "Hide the calculation" : "How this is calculated")

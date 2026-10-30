@@ -18,17 +18,17 @@ struct ContributionGridView: View {
                 Picker("Range", selection: $rangeDays) {
                     ForEach(Self.ranges, id: \.1) { Text($0.0).tag($0.1) }
                 }
-                .pickerStyle(.segmented)
+                .pickerStyle(.segmented).labelsHidden()
                 .frame(maxWidth: 220)
                 Spacer()
                 Button { expanded = true } label: {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right").font(.system(size: 12))
+                    Image(systemName: "arrow.up.left.and.arrow.down.right").font(.ui(12))
                 }
                 .foregroundStyle(Theme.faint)
                 .accessibilityLabel("Show full lifetime activity")
             }
             GridBody(cells: rangeDays >= cells.count ? cells : Array(cells.suffix(rangeDays)), selected: $selected)
-            if let c = selected { Text(Self.describe(c)).font(.system(size: 12)).foregroundStyle(Theme.ink2).transition(.opacity) }
+            if let c = selected { Text(Self.describe(c)).font(.ui(12)).foregroundStyle(Theme.ink2).transition(.opacity) }
         }
         .sheet(isPresented: $expanded) {
             NavigationStack {
@@ -80,7 +80,7 @@ private struct GridBody: View {
                     VStack(spacing: gap) {
                         ForEach(0..<7, id: \.self) { i in
                             Text(i % 2 == 1 ? ["S", "M", "T", "W", "T", "F", "S"][i] : "")
-                                .font(.system(size: 8)).foregroundStyle(Theme.faint).frame(width: 12, height: size)
+                                .font(.ui(8)).foregroundStyle(Theme.faint).frame(width: 12, height: size)
                         }
                     }
                     ForEach(Array(weeks.enumerated()), id: \.offset) { wi, week in
@@ -161,7 +161,7 @@ struct GridLegend: View {
     private func item<S: View>(_ label: String, @ViewBuilder _ swatch: () -> S) -> some View {
         HStack(spacing: 5) {
             swatch().frame(width: 10, height: 10)
-            Text(label).font(.system(size: 10)).foregroundStyle(Theme.faint)
+            Text(label).font(.ui(10)).foregroundStyle(Theme.faint)
         }
     }
 }

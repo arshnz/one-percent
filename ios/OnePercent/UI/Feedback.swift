@@ -31,7 +31,7 @@ struct ToastOverlay: ViewModifier {
             if let t = toasts.current {
                 HStack(spacing: 8) {
                     if let icon = t.icon { Image(systemName: icon) }
-                    Text(t.text).font(.system(size: 14, weight: .medium))
+                    Text(t.text).font(.ui(14, weight: .medium))
                 }
                 .foregroundStyle(t.isError ? Theme.red : Theme.ink)
                 .padding(.horizontal, 16).padding(.vertical, 12)

@@ -57,9 +57,9 @@ struct CoachView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Label("HABIT COACH", systemImage: "graduationcap").font(.eyebrow).tracking(1.4).foregroundStyle(Theme.faint)
-                Text("Ask the coach").font(.system(size: 26, weight: .semibold)).tracking(-0.5).foregroundStyle(Theme.ink)
-                Text("Answers grounded in Atomic Habits and your own habits, goals and recent weeks.").font(.system(size: 14)).foregroundStyle(Theme.ink2)
+                Label(caps("Habit coach"), systemImage: "graduationcap").font(.eyebrow).capsTracking(1.4).foregroundStyle(Theme.faint)
+                Text("Ask the coach").font(.ui(26, weight: .semibold)).tracking(-0.5).foregroundStyle(Theme.ink)
+                Text("Answers grounded in Atomic Habits and your own habits, goals and recent weeks.").font(.ui(14)).foregroundStyle(Theme.ink2)
             }
             Button {
                 let c = CoachConversation()
@@ -70,17 +70,17 @@ struct CoachView: View {
             .buttonStyle(PrimaryButtonStyle())
 
             if conversations.isEmpty {
-                Text("No chats yet. Start one — ask anything about building or breaking a habit.").font(.system(size: 13)).foregroundStyle(Theme.faint)
+                Text("No chats yet. Start one — ask anything about building or breaking a habit.").font(.ui(13)).foregroundStyle(Theme.faint)
             }
             ForEach(conversations) { c in
                 Button { open = c } label: {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(c.title).font(.system(size: 15, weight: .medium)).foregroundStyle(Theme.ink).lineLimit(1)
-                            Text(c.lastMessageAt.formatted(.relative(presentation: .named))).font(.system(size: 12)).foregroundStyle(Theme.faint)
+                            Text(c.title).font(.ui(15, weight: .medium)).foregroundStyle(Theme.ink).lineLimit(1)
+                            Text(c.lastMessageAt.formatted(.relative(presentation: .named))).font(.ui(12)).foregroundStyle(Theme.faint)
                         }
                         Spacer()
-                        Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                        Image(systemName: "chevron.right").font(.ui(12)).foregroundStyle(Theme.faint)
                     }
                     .padding(14).card()
                 }
@@ -134,10 +134,10 @@ struct CoachChatView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         if messages.isEmpty {
                             Text("Ask about building or breaking a habit — the coach knows your habits, goals and recent weeks.")
-                                .font(.system(size: 14)).foregroundStyle(Theme.ink2)
+                                .font(.ui(14)).foregroundStyle(Theme.ink2)
                             ForEach(Self.starters, id: \.self) { s in
                                 Button { ask(s) } label: {
-                                    Text(s).font(.system(size: 14)).foregroundStyle(Theme.ink).frame(maxWidth: .infinity, alignment: .leading)
+                                    Text(s).font(.ui(14)).foregroundStyle(Theme.ink).frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(12).background(Theme.panel, in: RoundedRectangle(cornerRadius: 12))
                                 }
                                 .buttonStyle(.plain)
@@ -150,7 +150,7 @@ struct CoachChatView: View {
                             MessageBubble(message: ChatMessage(role: "user", text: asking))
                             MessageBubble(message: ChatMessage(role: "model", text: streaming.isEmpty ? "…" : streaming), streaming: true)
                         }
-                        if let error { Text(error).font(.system(size: 13)).foregroundStyle(Theme.red) }
+                        if let error { Text(error).font(.ui(13)).foregroundStyle(Theme.red) }
                         Color.clear.frame(height: 1).id("end")
                     }
                     .padding(16)
@@ -199,7 +199,7 @@ struct CoachChatView: View {
                     .background(Theme.card, in: RoundedRectangle(cornerRadius: 14))
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.line))
                 Button { ask(input) } label: {
-                    Image(systemName: "arrow.up").font(.system(size: 15, weight: .bold)).foregroundStyle(Theme.buttonText)
+                    Image(systemName: "arrow.up").font(.ui(15, weight: .bold)).foregroundStyle(Theme.buttonText)
                         .frame(width: 40, height: 40).background(Theme.button, in: Circle())
                 }
                 .disabled(input.trimmed.isEmpty || busy)
@@ -208,7 +208,7 @@ struct CoachChatView: View {
             HStack {
                 AIStatusBadge()
                 Spacer()
-                Button { openHandOff() } label: { Label("Hand off", systemImage: "arrow.up.forward.app").font(.system(size: 12, weight: .medium)) }
+                Button { openHandOff() } label: { Label("Hand off", systemImage: "arrow.up.forward.app").font(.ui(12, weight: .medium)) }
                     .foregroundStyle(Theme.ink2)
             }
         }
@@ -311,16 +311,16 @@ struct BlueprintInterviewView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label("Co-design it with AI", systemImage: "bubble.left.and.text.bubble.right").font(.system(size: 15, weight: .semibold))
+                Label("Co-design it with AI", systemImage: "bubble.left.and.text.bubble.right").font(.ui(15, weight: .semibold))
                 Spacer()
-                if open { Button("Minimize") { open = false }.font(.system(size: 13)) }
+                if open { Button("Minimize") { open = false }.font(.ui(13)) }
             }
             Text(breaking ? "A few quick questions and I'll draft the whole plan — in your own words — for you to review below."
                  : "Answer a few questions and I'll draft the whole blueprint — in your own words — for you to review and tweak below.")
-                .font(.system(size: 13)).foregroundStyle(Theme.ink2)
+                .font(.ui(13)).foregroundStyle(Theme.ink2)
             if open {
                 GuidedChatView(messages: $messages, modelName: "Interviewer", system: system, placeholder: "Type your answer…", onStreamingChange: { streaming = $0 })
-                if let error { Text(error).font(.system(size: 13)).foregroundStyle(Theme.red) }
+                if let error { Text(error).font(.ui(13)).foregroundStyle(Theme.red) }
                 HStack {
                     Button { draft() } label: {
                         Label(drafting ? "Drafting…" : "Draft it", systemImage: "sparkles")
@@ -332,7 +332,7 @@ struct BlueprintInterviewView: View {
                         .buttonStyle(SecondaryButtonStyle()).frame(width: 60)
                         .accessibilityLabel("Hand off the draft")
                 }
-                if userTurns < 2 { Text("Answer a couple of questions first.").font(.system(size: 12)).foregroundStyle(Theme.faint) }
+                if userTurns < 2 { Text("Answer a couple of questions first.").font(.ui(12)).foregroundStyle(Theme.faint) }
             } else {
                 Button("Start co-design") { open = true }.buttonStyle(SecondaryButtonStyle())
             }
@@ -437,11 +437,11 @@ struct CompassAIHelper: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if !open {
-                Button { open = true } label: { Label("Talk it through with AI", systemImage: "sparkles").font(.system(size: 14, weight: .medium)) }
+                Button { open = true } label: { Label("Talk it through with AI", systemImage: "sparkles").font(.ui(14, weight: .medium)) }
                     .foregroundStyle(Theme.accent)
             } else {
                 HStack {
-                    Label("Talk it through", systemImage: "message").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.ink2)
+                    Label("Talk it through", systemImage: "message").font(.ui(13, weight: .semibold)).foregroundStyle(Theme.ink2)
                     Spacer()
                     Button { open = false } label: { Image(systemName: "xmark") }.foregroundStyle(Theme.faint)
                 }
@@ -456,7 +456,7 @@ struct CompassAIHelper: View {
                         Button { handOff = extractHandOff() } label: { Image(systemName: "arrow.up.forward.app") }
                             .buttonStyle(SecondaryButtonStyle()).frame(width: 60)
                     }
-                    Text("Fills the fields above from this chat. You can edit everything after.").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                    Text("Fills the fields above from this chat. You can edit everything after.").font(.ui(12)).foregroundStyle(Theme.faint)
                 }
             }
         }

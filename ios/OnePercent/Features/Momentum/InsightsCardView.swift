@@ -29,9 +29,9 @@ struct InsightsCardView: View {
         if items.isEmpty {
             // No cached read yet: offer to write the first one.
             HStack {
-                Label("What the data says", systemImage: "sparkles").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.ink2)
+                Label("What the data says", systemImage: "sparkles").font(.ui(13, weight: .semibold)).foregroundStyle(Theme.ink2)
                 Spacer()
-                Button(refreshing ? "Reading…" : "Read my data") { refresh() }.font(.system(size: 13, weight: .medium)).disabled(refreshing || !AIEngine.status.isAvailable)
+                Button(refreshing ? "Reading…" : "Read my data") { refresh() }.font(.ui(13, weight: .medium)).disabled(refreshing || !AIEngine.status.isAvailable)
                 Button { if let p = profile { handOff = Insights.handOff(ctx, tz: p.timezone) } } label: { Image(systemName: "arrow.up.forward.app") }
             }
             .padding(16).card()
@@ -39,7 +39,7 @@ struct InsightsCardView: View {
         } else {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Label("What the data says", systemImage: "sparkles").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.ink2)
+                    Label("What the data says", systemImage: "sparkles").font(.ui(13, weight: .semibold)).foregroundStyle(Theme.ink2)
                     Spacer()
                     Menu {
                         Button("Refresh with Apple Intelligence", systemImage: "arrow.clockwise") { refresh() }.disabled(!AIEngine.status.isAvailable)
@@ -47,7 +47,7 @@ struct InsightsCardView: View {
                     } label: {
                         Group {
                             Label(refreshing ? "Reading…" : "Refresh", systemImage: "arrow.clockwise")
-                                .font(.system(size: 11, weight: .medium))
+                                .font(.ui(11, weight: .medium))
                                 .symbolEffect(.rotate, isActive: refreshing)
                         }
                     }
@@ -57,11 +57,11 @@ struct InsightsCardView: View {
                 ForEach(Array(items.enumerated()), id: \.offset) { _, line in
                     HStack(alignment: .top, spacing: 8) {
                         Circle().fill(Theme.accent).frame(width: 5, height: 5).padding(.top, 7)
-                        Text(line).font(.system(size: 14)).foregroundStyle(Theme.ink)
+                        Text(line).font(.ui(14)).foregroundStyle(Theme.ink)
                     }
                 }
                 if let at = profile?.momentumInsightsAt {
-                    Text("Written \(at.formatted(.dateTime.day().month(.abbreviated)))").font(.system(size: 11)).foregroundStyle(Theme.faint)
+                    Text("Written \(at.formatted(.dateTime.day().month(.abbreviated)))").font(.ui(11)).foregroundStyle(Theme.faint)
                 }
             }
             .padding(18)

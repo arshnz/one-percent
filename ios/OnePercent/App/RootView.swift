@@ -10,13 +10,21 @@ struct RootView: View {
             if profiles.isEmpty {
                 ImportView()
             } else {
+                #if os(macOS)
+                MacMainView()
+                #else
                 MainTabView()
+                #endif
             }
         }
         // The overlay reads Toasts from the environment, so it must sit inside it.
         .toasts()
         .environment(toasts)
+        #if os(macOS)
+        .tint(Theme.accent)
+        #else
         .tint(Theme.ink)
+        #endif
     }
 }
 

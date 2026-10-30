@@ -51,12 +51,12 @@ struct LaunchpadView: View {
                     }
                     if live.isEmpty {
                         Text("One habit, built properly, beats six started at once. Engineer your first — every vote you cast is a step toward who you want to become.")
-                            .font(.system(size: 14.5)).foregroundStyle(Theme.muted)
+                            .font(.ui(14.5)).foregroundStyle(Theme.muted)
                     }
                     if running > 2 {
                         (Text("A word on focus: ").fontWeight(.semibold).foregroundStyle(Theme.ink)
                          + Text("the more change you take on at once, the less of it sticks. The rule of thumb is one personal habit, one professional — you’re running \(running). Consider pausing the rest until one feels automatic."))
-                            .font(.system(size: 13.5)).foregroundStyle(Theme.ink2)
+                            .font(.ui(13.5)).foregroundStyle(Theme.ink2)
                             .padding(.horizontal, 16).padding(.vertical, 12)
                             .background(Color(hex: 0xFBF7EC).opacity(0.9), in: RoundedRectangle(cornerRadius: 14))
                             .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(hex: 0xE4DCC9)))
@@ -69,9 +69,9 @@ struct LaunchpadView: View {
                     if live.count < Self.slots, let onAddHabit {
                         Button(action: onAddHabit) {
                             VStack(spacing: 10) {
-                                Image(systemName: "plus").font(.system(size: 18, weight: .medium))
+                                Image(systemName: "plus").font(.ui(18, weight: .medium))
                                     .frame(width: 42, height: 42).background(Theme.rest, in: Circle())
-                                Text("Add a habit").font(.system(size: 14, weight: .semibold))
+                                Text("Add a habit").font(.ui(14, weight: .semibold))
                             }
                             .foregroundStyle(Theme.faint)
                             .frame(maxWidth: .infinity, minHeight: 140)
@@ -111,19 +111,19 @@ struct LaunchpadView: View {
         let first = Self.firstName(profiles.first?.name)
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Image(systemName: "paperplane").font(.system(size: 12))
+                Image(systemName: "paperplane").font(.ui(12))
                 Eyebrow("The Launchpad")
                 Spacer()
                 Button { router.showSettings = true } label: {
-                    Image(systemName: "gearshape").font(.system(size: 17)).foregroundStyle(Theme.ink2).frame(width: 36, height: 36)
+                    Image(systemName: "gearshape").font(.ui(17)).foregroundStyle(Theme.ink2).frame(width: 36, height: 36)
                 }
                 .accessibilityLabel("Settings")
             }
             .foregroundStyle(Theme.faint)
             Text(Self.greeting(now) + (first.map { ", \($0)" } ?? ""))
-                .font(.system(size: 27, weight: .bold)).tracking(-0.5).foregroundStyle(Theme.ink)
+                .font(.ui(27, weight: .bold)).tracking(-0.5).foregroundStyle(Theme.ink)
             Text(DateText.long(p.date) + (p.habits.isEmpty ? "" : " · \(left) \(left == 1 ? "vote" : "votes") left to cast"))
-                .font(.system(size: 14.5)).foregroundStyle(Theme.muted)
+                .font(.ui(14.5)).foregroundStyle(Theme.muted)
             HStack(spacing: 14) {
                 Theme.accent.opacity(0.45).frame(width: 2)
                 Text("“\(Quotes.ofTheDay(now))”").font(.serif(16.5, italic: true)).foregroundStyle(Theme.ink)
@@ -137,13 +137,13 @@ struct LaunchpadView: View {
     private func compassNudge(_ open: @escaping () -> Void) -> some View {
         Button(action: open) {
             HStack(alignment: .top, spacing: 16) {
-                Image(systemName: "safari").font(.system(size: 19)).foregroundStyle(.white)
+                Image(systemName: "safari").font(.ui(19)).foregroundStyle(.white)
                     .frame(width: 44, height: 44).background(Theme.button, in: Circle())
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Set your bearings first").font(.system(size: 16, weight: .semibold)).foregroundStyle(Theme.ink)
+                    Text("Set your bearings first").font(.ui(16, weight: .semibold)).foregroundStyle(Theme.ink)
                     Text("Habits stick when they serve something bigger. Ten minutes in the Compass maps where you are, where you’re heading, and the one habit that starts the path.")
-                        .font(.system(size: 13.5)).foregroundStyle(Theme.ink2).multilineTextAlignment(.leading)
-                    Text("Open the Compass →").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.gold).padding(.top, 4)
+                        .font(.ui(13.5)).foregroundStyle(Theme.ink2).multilineTextAlignment(.leading)
+                    Text("Open the Compass →").font(.ui(13, weight: .semibold)).foregroundStyle(Theme.gold).padding(.top, 4)
                 }
             }
             .padding(20)
@@ -158,8 +158,8 @@ struct LaunchpadView: View {
             ForEach(paused) { h in
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(h.title).font(.system(size: 14, weight: .medium)).foregroundStyle(Theme.ink2).lineLimit(1)
-                        Text("Resting — no votes owed, no streak lost.").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                        Text(h.title).font(.ui(14, weight: .medium)).foregroundStyle(Theme.ink2).lineLimit(1)
+                        Text("Resting — no votes owed, no streak lost.").font(.ui(12)).foregroundStyle(Theme.faint)
                     }
                     Spacer()
                     Button {
@@ -169,7 +169,7 @@ struct LaunchpadView: View {
                             replan()
                         } catch { toasts.error("Could not resume this habit") }
                     } label: {
-                        Label("Resume", systemImage: "play.circle").font(.system(size: 13, weight: .semibold))
+                        Label("Resume", systemImage: "play.circle").font(.ui(13, weight: .semibold))
                             .padding(.horizontal, 12).padding(.vertical, 8)
                             .background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
                             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.line))

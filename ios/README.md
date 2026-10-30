@@ -15,9 +15,11 @@ open OnePercent.xcodeproj
 Two app targets, one source tree:
 
 - **OnePercent** — the iPhone app. Owns Apple Health and every notification.
-- **OnePercentMac** — the same code compiled for macOS (scheme `OnePercentMac`). Tabs become a sidebar; ⌘N new habit, ⌘, settings, ⌘1–5 sections. No Apple Health and no notifications on the Mac — both would duplicate the phone's.
+- **OnePercentMac** — the same code compiled for macOS (scheme `OnePercentMac`). No Apple Health and no notifications on the Mac — both would duplicate the phone's.
 
-What differs by platform goes through `OnePercent/UI/Platform.swift`; feature code shouldn't need `#if os(...)` beyond that.
+The Mac has its own window, `Features/Mac/MacShell.swift`: a sidebar of sections and habits, a three-pane Today (the day's habits, then the shared habit card), a page per habit, and right-click menus. Every screen inside it is the shared view. ⌘N new habit, ⌘, settings, ⌘1–5 sections.
+
+The Mac also looks like a Mac without touching the iPhone: `Theme` maps to system colours there (terracotta stays the accent), `Font.ui` draws every fixed size ~12% smaller, cards become hairline boxes, small labels use sentence case (`caps`), and in-page headers and section pickers move to the title bar and toolbar (`phoneOnly`, `macToolbarPicker`). Other platform differences go through `OnePercent/UI/Platform.swift`.
 
 ```bash
 xcodebuild -project OnePercent.xcodeproj -scheme OnePercentMac -destination 'platform=macOS' \
