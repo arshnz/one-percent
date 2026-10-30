@@ -29,10 +29,11 @@ extension View {
         #endif
     }
 
-    /// Mac: the tabs become a sidebar.
+    /// Mac: the tabs become a sidebar, and forms use the grouped, iOS-like
+    /// layout — the Mac's default two-column form squeezes every field.
     @ViewBuilder func macSidebarTabs() -> some View {
         #if os(macOS)
-        tabViewStyle(.sidebarAdaptable)
+        tabViewStyle(.sidebarAdaptable).formStyle(.grouped)
         #else
         self
         #endif
@@ -52,6 +53,7 @@ extension View {
     @ViewBuilder func macSheet(width: CGFloat, height: CGFloat) -> some View {
         #if os(macOS)
         frame(minWidth: width, idealWidth: width, minHeight: height, idealHeight: height)
+            .formStyle(.grouped)
         #else
         self
         #endif

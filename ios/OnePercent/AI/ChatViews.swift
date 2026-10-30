@@ -211,6 +211,7 @@ struct HandOffSheet: View {
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .sheet(isPresented: $share) { ShareSheet(items: [handOff.prompt]) }
         }
+        .macSheet(width: 640, height: 720)
     }
 }
 

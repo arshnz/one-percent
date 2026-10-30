@@ -58,7 +58,7 @@ struct CompassView: View {
             loaded = true
         }
         .onChange(of: draft) { scheduleSave() }
-        .sheet(item: $viewing) { SnapshotViewer(snapshot: $0) }
+        .sheet(item: $viewing) { SnapshotViewer(snapshot: $0).macSheet(width: 620, height: 700) }
         .confirmationDialog("Restore this snapshot?", isPresented: Binding(get: { confirmRestore != nil }, set: { if !$0 { confirmRestore = nil } }), titleVisibility: .visible) {
             Button("Restore") { if let s = confirmRestore { restore(s) } }
         } message: {

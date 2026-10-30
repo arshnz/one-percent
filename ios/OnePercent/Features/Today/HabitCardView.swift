@@ -80,7 +80,7 @@ struct HabitCardView: View {
         .opacity(isGrayedOut ? 0.6 : 1)
         .overlay { ConfettiBurst(trigger: confetti) }
         .sensoryFeedback(.success, trigger: voteTick)
-        .sheet(item: $sheet) { sheetView($0) }
+        .sheet(item: $sheet) { sheetView($0).macSheet(width: 520, height: 620) }
         .confirmationDialog("Pause this habit?", isPresented: $confirmPause, titleVisibility: .visible) {
             Button("Pause") { pause() }
         } message: {

@@ -48,7 +48,7 @@ struct CheckInCardView: View {
         .background(green.opacity(0.08), in: RoundedRectangle(cornerRadius: 18))
         .overlay(RoundedRectangle(cornerRadius: 18).stroke(green.opacity(0.25)))
         .sheet(isPresented: $open) {
-            CheckInSheet(pack: pack, onSaved: { open = false; onChanged() })
+            CheckInSheet(pack: pack, onSaved: { open = false; onChanged() }).macSheet(width: 600, height: 760)
         }
     }
 }

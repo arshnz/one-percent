@@ -93,7 +93,7 @@ struct CoachView: View {
                 }
             }
         }
-        .sheet(item: $open) { CoachChatView(conversation: $0) }
+        .sheet(item: $open) { CoachChatView(conversation: $0).macSheet(width: 680, height: 760) }
     }
 }
 

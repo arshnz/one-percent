@@ -38,6 +38,7 @@ struct ContributionGridView: View {
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { expanded = false } } }
             }
             .presentationDetents([.medium, .large])
+            .macSheet(width: 720, height: 520)
         }
     }
 
