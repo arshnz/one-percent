@@ -53,13 +53,39 @@ export const sendReminders = onSchedule(
   },
   async () => {
     const now = new Date()
-    const reminders = await runReminders(prisma, now)
-    const digest = await runDailyDigest(prisma, now)
-    const checkinNudge = await runCheckinNudge(prisma, now)
+
+    // ── Every reminder email is off. The phones send them now. ──────────────
+    //
+    // Turned off 30 October 2026, once both iOS apps were installed and each
+    // of the four daily mails had an on-device replacement:
+    //
+    //   runReminders     → One Percent, Reminders.swift (per-habit nudges)
+    //   runCheckinNudge  → One Percent, Reminders.swift (Sunday check-in)
+    //   runDailyDigest   → One Percent, Reminders.swift (the morning digest,
+    //                      added the same day — it was the last one missing)
+    //   runIaRaNudge     → Āta kai's own local notification, a separate app
+    //
+    // A local notification beats a mail for this job on every count: it is
+    // timed on the device rather than by a cron that has to guess a timezone,
+    // it can be switched off and retimed per notification in Settings, and it
+    // does not need a Gmail transport, a Postgres row or a function that wakes
+    // every fifteen minutes to decide whether to say nothing.
+    //
+    // Left as a flag rather than deleted. The code and its tests still work,
+    // the ios/README's plan is to retire this server entirely, and until that
+    // happens this is a one-word change if a phone ever has to hand the job
+    // back. Flip to true to resume.
+    const EMAIL_REMINDERS = false
+
+    const reminders = EMAIL_REMINDERS ? await runReminders(prisma, now) : 'off'
+    const digest = EMAIL_REMINDERS ? await runDailyDigest(prisma, now) : 'off'
+    const checkinNudge = EMAIL_REMINDERS ? await runCheckinNudge(prisma, now) : 'off'
     // A guest on this scheduler — see iaraNudge.ts. Never let it affect the
     // habit reminders that this function actually exists for.
-    let iara: unknown = 'skipped'
-    try { iara = await runIaRaNudge(prisma, now) } catch (e) { iara = `error: ${(e as Error).message}` }
+    let iara: unknown = 'off'
+    if (EMAIL_REMINDERS) {
+      try { iara = await runIaRaNudge(prisma, now) } catch (e) { iara = `error: ${(e as Error).message}` }
+    }
     // Never let a launcher-push failure affect reminders.
     let launcher = 'skipped'
     try { launcher = await pushHabitSnapshot(now) } catch (e) { launcher = `error: ${(e as Error).message}` }

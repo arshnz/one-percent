@@ -188,7 +188,7 @@ export interface IaRaLine { subject: string; headline: string; body: string }
 // itself.
 const IARA_LINES: IaRaLine[] = [
   { subject: 'Ia Rā', headline: 'Today is still open.',
-    body: 'One press, held for three seconds. That is the whole thing.' },
+    body: 'One press, held for a moment. That is the whole thing.' },
   { subject: 'Log today', headline: 'A minute before bed.',
     body: 'Food and movement are separate — either one on its own is fine.' },
   { subject: 'Ia Rā', headline: 'Whenever suits.',

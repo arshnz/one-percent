@@ -93,7 +93,10 @@ struct LaunchpadView: View {
         // Replan notifications whenever anything they depend on changes.
         .task(id: reminderInputs) {
             let enabled = profiles.first?.remindersEnabled ?? true
-            await Reminders.reschedule(habits: habits, checkIns: checkIns, tz: tz, enabled: enabled)
+            let prefs = Reminders.Prefs(profiles.first)
+            await Reminders.reschedule(
+                habits: habits, checkIns: checkIns, tz: tz, enabled: enabled, prefs: prefs
+            )
         }
         // Midnight rolls the day over even if the app stays open.
         .task(id: payload.date) {
@@ -187,6 +190,11 @@ struct LaunchpadView: View {
         var h = Hasher()
         h.combine(LocalDate.of(now, tz: tz))
         h.combine(profiles.first?.remindersEnabled)
+        h.combine(profiles.first?.habitRemindersEnabled)
+        h.combine(profiles.first?.digestEnabled)
+        h.combine(profiles.first?.digestTime)
+        h.combine(profiles.first?.checkInNudgeEnabled)
+        h.combine(profiles.first?.checkInTime)
         for x in habits {
             h.combine(x.uid); h.combine(x.reminderTime); h.combine(x.reminderEnabled); h.combine(x.pausedAt); h.combine(x.archivedAt)
             h.combine(x.scheduleType); h.combine(x.scheduleDays); h.combine(x.timesPerWeek); h.combine(x.title)

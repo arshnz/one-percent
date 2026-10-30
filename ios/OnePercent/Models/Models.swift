@@ -29,8 +29,23 @@ import SwiftData
     /// JSON array of strings — cached "What the data says".
     var momentumInsights: String?
     var momentumInsightsAt: Date?
-    /// Master switch for habit and check-in notifications.
+    /// Master switch for every local notification this app schedules. Off here
+    /// means nothing is queued at all, whatever the individual switches say.
     var remindersEnabled: Bool = true
+    /// Per-habit nudges at each habit's own reminder time.
+    var habitRemindersEnabled: Bool = true
+    /// The morning digest — today's intentions in one notification.
+    ///
+    /// Replaces the server's 6am digest email (`server/src/lib/digest.ts`),
+    /// which was the last of the four daily mails with no on-device
+    /// equivalent. Default kept at 6am so the swap is like-for-like.
+    var digestEnabled: Bool = true
+    /// "HH:MM", 24-hour, in the profile's timezone.
+    var digestTime: String = "06:00"
+    /// The Sunday check-in nudge.
+    var checkInNudgeEnabled: Bool = true
+    /// "HH:MM", 24-hour. Was hard-coded at 17:00 before it became a setting.
+    var checkInTime: String = "17:00"
     var createdAt: Date = Date()
 
     init() {}

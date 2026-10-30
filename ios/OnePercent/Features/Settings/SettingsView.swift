@@ -21,6 +21,11 @@ struct SettingsView: View {
     @State private var importing = false
     @State private var confirmErase = false
     @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
+    @State private var habitRemindersOn = true
+    @State private var digestOn = true
+    @State private var digestAt = Date()
+    @State private var checkInOn = true
+    @State private var checkInAt = Date()
     @State private var nextReminder: (title: String, at: Date)?
 
     private var profile: Profile? { profiles.first }
@@ -40,7 +45,7 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    Toggle("Habit reminders", isOn: $remindersOn).tint(Theme.accent)
+                    Toggle("Notifications", isOn: $remindersOn).tint(Theme.accent)
                     if notificationStatus == .denied {
                         Button("Notifications are off for One Percent — open Settings") {
                             if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
@@ -48,6 +53,15 @@ struct SettingsView: View {
                         .font(.system(size: 13))
                     }
                     if remindersOn && notificationStatus != .denied {
+                        Toggle("Morning digest", isOn: $digestOn).tint(Theme.accent)
+                        if digestOn {
+                            DatePicker("Digest at", selection: $digestAt, displayedComponents: .hourAndMinute)
+                        }
+                        Toggle("Habit reminders", isOn: $habitRemindersOn).tint(Theme.accent)
+                        Toggle("Weekly check-in", isOn: $checkInOn).tint(Theme.accent)
+                        if checkInOn {
+                            DatePicker("Check-in at", selection: $checkInAt, displayedComponents: .hourAndMinute)
+                        }
                         if let n = nextReminder {
                             LabeledContent("Next") {
                                 VStack(alignment: .trailing, spacing: 2) {
@@ -60,9 +74,9 @@ struct SettingsView: View {
                         }
                     }
                 } header: {
-                    Text("Reminders")
+                    Text("Notifications")
                 } footer: {
-                    Text("Each habit nudges you at its own reminder time, set in the Architect. Weekly habits stay quiet while you have slack. The weekly check-in nudge arrives Sunday at 5pm.")
+                    Text("The digest lists today's intentions in one notification. Each habit nudges you at its own reminder time, set in the Architect — weekly habits stay quiet while you have slack. The check-in nudge arrives on Sundays.")
                 }
 
                 HealthSettingsSlot.make()
@@ -108,6 +122,11 @@ struct SettingsView: View {
             personalContext = p.personalContext ?? ""
             timezone = p.timezone
             remindersOn = p.remindersEnabled
+            habitRemindersOn = p.habitRemindersEnabled
+            digestOn = p.digestEnabled
+            digestAt = Self.time(from: p.digestTime, fallback: Reminders.digestHour)
+            checkInOn = p.checkInNudgeEnabled
+            checkInAt = Self.time(from: p.checkInTime, fallback: Reminders.checkInHour)
             Task {
                 notificationStatus = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
                 nextReminder = await Reminders.next()
@@ -122,6 +141,22 @@ struct SettingsView: View {
         }
     }
 
+    /// "06:00" → a Date today at 06:00, for the picker. The date part is
+    /// never used; only the hour and minute are read back out.
+    static func time(from hhmm: String, fallback hour: Int) -> Date {
+        let mins = LocalDate.parseHHMM(hhmm) ?? hour * 60
+        return Calendar.current.date(
+            bySettingHour: mins / 60, minute: mins % 60, second: 0, of: Date()
+        ) ?? Date()
+    }
+
+    /// The picker's time back as "HH:MM", which is what the model stores and
+    /// what `Reminders.Prefs` parses.
+    static func hhmm(_ d: Date) -> String {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: d)
+        return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
+    }
+
     private func save() {
         guard let p = profile else { return }
         p.name = name.trimmed.nonEmpty
@@ -129,9 +164,20 @@ struct SettingsView: View {
         let tzChanged = p.timezone != timezone
         p.timezone = timezone
         p.remindersEnabled = remindersOn
+        p.habitRemindersEnabled = habitRemindersOn
+        p.digestEnabled = digestOn
+        p.digestTime = Self.hhmm(digestAt)
+        p.checkInNudgeEnabled = checkInOn
+        p.checkInTime = Self.hhmm(checkInAt)
         try? ctx.save()
         let habits = habits, checkIns = checkIns
-        Task { await Reminders.reschedule(habits: habits, checkIns: checkIns, tz: timezone, enabled: remindersOn) }
+        let prefs = Reminders.Prefs(p)
+        Task {
+            await Reminders.reschedule(
+                habits: habits, checkIns: checkIns, tz: timezone, enabled: remindersOn, prefs: prefs
+            )
+            nextReminder = await Reminders.next()
+        }
         if tzChanged { toasts.show("Time zone updated.") }
     }
 

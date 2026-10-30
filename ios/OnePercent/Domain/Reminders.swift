@@ -23,7 +23,36 @@ enum Reminders {
     /// enough to leave four days to make good on a weekly quota.
     static let midWeekNudgeDay = 4
     static let checkInHour = 17
+    static let digestHour = 6
     static let prefix = "op."
+
+    /// What the user has switched on, and when.
+    ///
+    /// Every notification this app sends is individually switchable and
+    /// individually timed — which is the point of it living on the phone
+    /// rather than in a cron. The server sent what it sent; this does not.
+    /// Defaults match the old server times exactly, so nothing moves until it
+    /// is deliberately moved.
+    struct Prefs: Equatable {
+        var habitReminders = true
+        var digest = true
+        var digestMinutes = digestHour * 60
+        var checkIn = true
+        var checkInMinutes = checkInHour * 60
+
+        static let `default` = Prefs()
+
+        init() {}
+
+        init(_ p: Profile?) {
+            guard let p else { return }
+            habitReminders = p.habitRemindersEnabled
+            digest = p.digestEnabled
+            digestMinutes = LocalDate.parseHHMM(p.digestTime) ?? Reminders.digestHour * 60
+            checkIn = p.checkInNudgeEnabled
+            checkInMinutes = LocalDate.parseHHMM(p.checkInTime) ?? Reminders.checkInHour * 60
+        }
+    }
 
     struct Planned: Equatable {
         let id: String
@@ -34,13 +63,19 @@ enum Reminders {
     }
 
     /// Pure planning, separate from the notification center so it can be tested.
-    static func plan(habits all: [Habit], checkIns: [CheckIn], now: Date, tz: String) -> [Planned] {
+    static func plan(
+        habits all: [Habit],
+        checkIns: [CheckIn],
+        now: Date,
+        tz: String,
+        prefs: Prefs = .default
+    ) -> [Planned] {
         let today = LocalDate.of(now, tz: tz)
         let nowMin = LocalDate.minutesOfDay(now, tz: tz)
         let live = all.filter { $0.archivedAt == nil && $0.pausedAt == nil }
         var out: [Planned] = []
 
-        for h in live where h.reminderEnabled {
+        for h in live where h.reminderEnabled && prefs.habitReminders {
             guard let minutes = LocalDate.parseHHMM(h.reminderTime) else { continue }
             let sched = Schedule(h)
             let hits = Set((h.logs ?? []).filter(\.isSuccess).map(\.date))
@@ -65,21 +100,92 @@ enum Reminders {
             }
         }
 
-        if !live.isEmpty {
+        if !live.isEmpty && prefs.checkIn {
             for k in 0..<horizonDays {
                 let date = LocalDate.shift(today, by: k)
                 guard LocalDate.weekday(date) == 0 else { continue }
-                if k == 0 && checkInHour * 60 <= nowMin { continue }
+                if k == 0 && prefs.checkInMinutes <= nowMin { continue }
                 let weekOf = LocalDate.mondayOf(date)
                 if checkIns.contains(where: { $0.weekOf == weekOf }) { continue }
                 out.append(Planned(
-                    id: "\(prefix)checkin.\(date)", date: date, minutes: checkInHour * 60,
+                    id: "\(prefix)checkin.\(date)", date: date, minutes: prefs.checkInMinutes,
                     title: "Your weekly check-in is ready",
                     body: "Take five minutes to look back on the week — what worked, what didn’t, what’s next."
                 ))
             }
         }
+        // ── The morning digest ────────────────────────────────────────────
+        //
+        // The on-device replacement for server/src/lib/digest.ts, the last of
+        // the daily emails with no equivalent here. One notification listing
+        // today's implementation intentions, rather than one per habit — the
+        // whole point of a digest is that it is a single look at the day.
+        //
+        // Planned per future day against what is due THAT day, using the same
+        // schedule rules the per-habit nudges use, so a digest never lists a
+        // habit that is not actually on today. A day with nothing due gets no
+        // digest at all rather than an empty one.
+        if prefs.digest {
+            for k in 0..<horizonDays {
+                let date = LocalDate.shift(today, by: k)
+                if k == 0 && prefs.digestMinutes <= nowMin { continue }
+                let due = live.filter { h in
+                    if hitsFor(h).contains(date) { return false }
+                    switch Schedule(h) {
+                    case .days(let days):
+                        return days.contains(LocalDate.weekday(date))
+                    case .weekly:
+                        guard let pr = ScheduleResolver.weekProgress(
+                            Schedule(h), today: date, hitDates: hitsFor(h), bounds: ScheduleBounds(h, tz: tz)
+                        ) else { return false }
+                        return pr.remaining > 0
+                    }
+                }
+                guard !due.isEmpty else { continue }
+                out.append(Planned(
+                    id: "\(prefix)digest.\(date)",
+                    date: date,
+                    minutes: prefs.digestMinutes,
+                    title: "Today's intentions — \(due.count) habit\(due.count == 1 ? "" : "s")",
+                    body: due.map(intentionLine).joined(separator: "\n")
+                ))
+            }
+        }
+
         return out
+    }
+
+    private static func hitsFor(_ h: Habit) -> Set<String> {
+        Set((h.logs ?? []).filter(\.isSuccess).map(\.date))
+    }
+
+    /// One habit's implementation intention, as a sentence.
+    ///
+    /// Mirrors `intentionLine()` in server/src/lib/digest.ts and the cue line
+    /// on the habit card, so the notification, the email that preceded it and
+    /// the card all phrase the same habit the same way.
+    static func intentionLine(for h: Habit) -> String {
+        if h.kind == "break" {
+            let instead = stripIWill(h.replacementAction?.trimmed.nonEmpty ?? "")
+            let trigger = h.avoidTrigger?.trimmed.nonEmpty
+            if let trigger, !instead.isEmpty { return "When \(trigger), I'll \(instead) instead" }
+            if !instead.isEmpty { return "I'll \(instead) instead of slipping" }
+            return "Stay free today — one clean day is a vote"
+        }
+        let action = stripIWill(h.failSafeAction.trimmed)
+        var cue = ""
+        switch h.cueType {
+        case "habit_stack": if let a = h.anchorRoutine?.trimmed.nonEmpty { cue = "After I \(a)" }
+        case "time": if let t = h.cueTime?.trimmed.nonEmpty { cue = "At \(t)" }
+        case "location": if let l = h.cueLocation?.trimmed.nonEmpty { cue = "When I get to \(l)" }
+        default: break
+        }
+        if cue.isEmpty { return action.isEmpty ? h.title : "I will \(action)" }
+        return "\(cue), I will \(action)"
+    }
+
+    private static func stripIWill(_ s: String) -> String {
+        s.replacingOccurrences(of: #"^i will\s+"#, with: "", options: [.regularExpression, .caseInsensitive])
     }
 
     /// Break habits get a pre-emptive guard at the moment of risk; build habits
@@ -112,9 +218,16 @@ enum Reminders {
     }
 
     /// Replace every pending One Percent notification with a fresh plan.
-    static func reschedule(habits: [Habit], checkIns: [CheckIn], tz: String, enabled: Bool = true, now: Date = Date()) async {
+    static func reschedule(
+        habits: [Habit],
+        checkIns: [CheckIn],
+        tz: String,
+        enabled: Bool = true,
+        prefs: Prefs = .default,
+        now: Date = Date()
+    ) async {
         let center = UNUserNotificationCenter.current()
-        let planned = enabled ? plan(habits: habits, checkIns: checkIns, now: now, tz: tz) : []
+        let planned = enabled ? plan(habits: habits, checkIns: checkIns, now: now, tz: tz, prefs: prefs) : []
         let settings = await center.notificationSettings()
         if settings.authorizationStatus == .notDetermined && !planned.isEmpty {
             _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
