@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: com.arshdeep
   deploymentTarget:
     iOS: "26.0"
+    macOS: "26.0"
   createIntermediateGroups: true
 settings:
   base:
@@ -39,12 +40,50 @@ targets:
       properties:
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
+        # iCloud sync with the Mac app — see App/CloudSync.swift.
+        com.apple.developer.icloud-container-identifiers: [iCloud.com.arshdeep.onepercent]
+        com.apple.developer.icloud-services: [CloudKit]
+        aps-environment: development
     info:
       path: OnePercent/Info.plist
       properties:
         NSHealthShareUsageDescription: One Percent reads your sleep, heart rate, HRV, steps and workouts to show what your body recorded, and to test whether your habits show up in it. It never writes to Health.
         # Flip to true once Apple grants the Private Cloud Compute entitlement
         # and it's added to the target — until then the on-device model answers.
+        OPUsePrivateCloudCompute: false
+        # CloudKit wakes the app with a silent push when the Mac changes something.
+        UIBackgroundModes: [remote-notification]
+  # The Mac app: the same source as the iPhone app, compiled for macOS. What
+  # differs by platform goes through UI/Platform.swift; Apple Health and
+  # reminders stay on the iPhone, and the two share data through iCloud.
+  OnePercentMac:
+    type: application
+    platform: macOS
+    sources:
+      - OnePercent
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.arshdeep.onepercent.mac
+        PRODUCT_NAME: One Percent
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: One Percent
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.healthcare-fitness
+        SWIFT_OPTIMIZATION_LEVEL: "-O"
+        ENABLE_HARDENED_RUNTIME: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIconMac
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    entitlements:
+      path: OnePercent/OnePercentMac.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.files.user-selected.read-write: true
+        com.apple.developer.icloud-container-identifiers: [iCloud.com.arshdeep.onepercent]
+        com.apple.developer.icloud-services: [CloudKit]
+        com.apple.developer.aps-environment: development
+    info:
+      path: OnePercent/Info-Mac.plist
+      properties:
         OPUsePrivateCloudCompute: false
   OnePercentTests:
     type: bundle.unit-test
@@ -68,3 +107,7 @@ schemes:
     test:
       targets:
         - OnePercentTests
+  OnePercentMac:
+    build:
+      targets:
+        OnePercentMac: all

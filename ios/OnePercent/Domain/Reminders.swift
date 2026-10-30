@@ -227,7 +227,13 @@ enum Reminders {
         now: Date = Date()
     ) async {
         let center = UNUserNotificationCenter.current()
+        #if os(macOS)
+        // The iPhone owns reminders; with the data synced, a Mac planning the
+        // same ones would send every nudge twice.
+        let planned: [Planned] = []
+        #else
         let planned = enabled ? plan(habits: habits, checkIns: checkIns, now: now, tz: tz, prefs: prefs) : []
+        #endif
         let settings = await center.notificationSettings()
         if settings.authorizationStatus == .notDetermined && !planned.isEmpty {
             _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])

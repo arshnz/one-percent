@@ -30,19 +30,19 @@ struct RootView: View {
 }
 
 struct MainTabView: View {
-    @State private var router = AppRouter()
+    @Environment(AppRouter.self) private var router
 
     var body: some View {
         @Bindable var router = router
         TabView(selection: $router.tab) {
             Tab("Today", systemImage: "sun.max", value: AppRouter.TabKey.today) {
-                LaunchpadView()
+                LaunchpadView().macColumn()
             }
             Tab("Compass", systemImage: "safari", value: AppRouter.TabKey.compass) {
-                CompassView()
+                CompassView().macColumn()
             }
             Tab("Learn", systemImage: "graduationcap", value: AppRouter.TabKey.learn) {
-                LearningView()
+                LearningView().macColumn()
             }
             Tab("Momentum", systemImage: "chart.line.uptrend.xyaxis", value: AppRouter.TabKey.momentum) {
                 MomentumView(
@@ -51,12 +51,13 @@ struct MainTabView: View {
                     habitFooter: HabitFooterSlot.factory,
                     measuredExtra: AnyView(WearableSeriesView())
                 )
+                .macColumn()
             }
             BodyTabSlot.make()
         }
-        .environment(router)
-        .sheet(item: $router.architect) { ArchitectView(seed: $0).environment(router) }
-        .sheet(isPresented: $router.showSettings) { SettingsView() }
+        .macSidebarTabs()
+        .sheet(item: $router.architect) { ArchitectView(seed: $0).environment(router).macSheet(width: 640, height: 760) }
+        .sheet(isPresented: $router.showSettings) { SettingsView().macSheet(width: 560, height: 720) }
     }
 }
 
@@ -66,7 +67,7 @@ enum BodyTabSlot {
 
     @MainActor @TabContentBuilder<AppRouter.TabKey> static func make() -> some TabContent<AppRouter.TabKey> {
         if let f = factory {
-            Tab("Body", systemImage: "heart.text.square", value: AppRouter.TabKey.body) { f() }
+            Tab("Body", systemImage: "heart.text.square", value: AppRouter.TabKey.body) { f().macColumn() }
         }
     }
 }

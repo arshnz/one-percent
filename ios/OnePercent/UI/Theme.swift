@@ -1,5 +1,9 @@
 import SwiftUI
+#if os(iOS)
 import UIKit
+#else
+import AppKit
+#endif
 
 // The web app's palette — warm graphite, one terracotta accent, one green for
 // "you showed up" — with dark-mode counterparts. Serif headings use New York,
@@ -42,15 +46,31 @@ enum Theme {
     // Nonisolated on purpose: SwiftUI resolves dynamic colours on its render
     // thread, and a main-actor closure there traps at runtime.
     nonisolated private static func dynamic(_ light: UInt32, _ dark: UInt32) -> Color {
+        #if os(iOS)
         Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? UIColor(hex: dark) : UIColor(hex: light) })
+        #else
+        Color(nsColor: NSColor(name: nil) { $0.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? NSColor(hex: dark) : NSColor(hex: light) })
+        #endif
     }
 }
 
+#if os(iOS)
+typealias PlatformColor = UIColor
+#else
+typealias PlatformColor = NSColor
+#endif
+
 extension Color {
-    nonisolated init(hex: UInt32) { self.init(uiColor: UIColor(hex: hex)) }
+    nonisolated init(hex: UInt32) {
+        #if os(iOS)
+        self.init(uiColor: UIColor(hex: hex))
+        #else
+        self.init(nsColor: NSColor(hex: hex))
+        #endif
+    }
 }
 
-extension UIColor {
+extension PlatformColor {
     nonisolated convenience init(hex: UInt32) {
         self.init(
             red: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255,

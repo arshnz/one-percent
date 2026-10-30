@@ -50,7 +50,7 @@ struct MomentumView: View {
             }
             .background(Theme.bg)
             .refreshable { now = Date() }
-            .toolbar(.hidden, for: .navigationBar)
+            .hidePhoneNavBar()
         }
         .onChange(of: scenePhase) { if scenePhase == .active { now = Date() } }
         .task(id: inputs) { data = Momentum.compute(habits: habits, checkIns: checkIns, now: now, tz: tz) }

@@ -87,7 +87,7 @@ struct LaunchpadView: View {
             }
             .background(Theme.bg)
             .refreshable { now = Date() }
-            .toolbar(.hidden, for: .navigationBar)
+            .hidePhoneNavBar()
         }
         .onChange(of: scenePhase) { if scenePhase == .active { now = Date() } }
         // Replan notifications whenever anything they depend on changes.

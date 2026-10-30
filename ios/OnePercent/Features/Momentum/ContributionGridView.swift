@@ -34,7 +34,7 @@ struct ContributionGridView: View {
             NavigationStack {
                 ScrollView { GridBody(cells: cells, selected: $selected).padding() }
                     .navigationTitle("Full lifetime activity")
-                    .navigationBarTitleDisplayMode(.inline)
+                    .inlineTitle()
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { expanded = false } } }
             }
             .presentationDetents([.medium, .large])

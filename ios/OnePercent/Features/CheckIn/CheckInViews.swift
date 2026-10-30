@@ -176,7 +176,7 @@ struct CheckInSheet: View {
                 }
             }
             .navigationTitle("Week of \(DateText.monthDay(pack.weekOf))")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } } }
         }
         .onAppear {

@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 import SwiftData
 import UniformTypeIdentifiers
 
@@ -44,6 +45,7 @@ struct SettingsView: View {
                     Text("Days roll over at midnight in this time zone.")
                 }
 
+                #if os(iOS)
                 Section {
                     Toggle("Notifications", isOn: $remindersOn).tint(Theme.accent)
                     if notificationStatus == .denied {
@@ -78,6 +80,14 @@ struct SettingsView: View {
                 } footer: {
                     Text("The digest lists today's intentions in one notification. Each habit nudges you at its own reminder time, set in the Architect — weekly habits stay quiet while you have slack. The check-in nudge arrives on Sundays.")
                 }
+                #else
+                Section {
+                    Text("Reminders come from your iPhone, so nothing arrives twice. Their times and switches are set there, in Settings.")
+                        .font(.system(size: 13)).foregroundStyle(Theme.ink2)
+                } header: {
+                    Text("Notifications")
+                }
+                #endif
 
                 HealthSettingsSlot.make()
 
@@ -99,7 +109,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Your data")
                 } footer: {
-                    Text("Everything lives on this phone. A backup is one file you can keep in iCloud Drive or AirDrop to a new phone — it restores exactly like your original import.")
+                    Text("Your data lives on your devices and in your own iCloud, which keeps the iPhone and Mac in step — there is no server. A backup is one file you can keep anywhere; it restores exactly like your original import.")
                 }
 
                 Section {
@@ -111,7 +121,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { save(); dismiss() } }
             }
@@ -134,10 +144,10 @@ struct SettingsView: View {
         }
         .sheet(item: $backup) { file in ShareSheet(items: [file.url]) }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { restore($0) }
-        .confirmationDialog("Erase everything on this phone?", isPresented: $confirmErase, titleVisibility: .visible) {
+        .confirmationDialog("Erase everything, on every device?", isPresented: $confirmErase, titleVisibility: .visible) {
             Button("Erase all data", role: .destructive) { erase() }
         } message: {
-            Text("Habits, history, check-ins, coach chats — all of it. Back up first if you might want it back. This can’t be undone.")
+            Text("Habits, history, check-ins, coach chats — all of it, on your iPhone and Mac alike, because they share one copy in iCloud. Back up first if you might want it back. This can’t be undone.")
         }
     }
 
@@ -227,16 +237,6 @@ struct SettingsView: View {
 struct BackupFile: Identifiable {
     let url: URL
     var id: URL { url }
-}
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }
 
 /// Where the Apple Health card plugs in (the Body layer registers it).

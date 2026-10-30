@@ -1,6 +1,6 @@
-# One Percent — native iOS
+# One Percent — native iOS and Mac
 
-SwiftUI + SwiftData, on-device. No server: this replaces the web app, Firebase and Postgres.
+SwiftUI + SwiftData, on-device, synced between iPhone and Mac through your own iCloud. No server: this replaces the web app, Firebase and Postgres.
 
 ## Build
 
@@ -11,6 +11,32 @@ open OnePercent.xcodeproj
 ```
 
 `project.yml` is the source of truth. The `.xcodeproj` is generated and gitignored.
+
+Two app targets, one source tree:
+
+- **OnePercent** — the iPhone app. Owns Apple Health and every notification.
+- **OnePercentMac** — the same code compiled for macOS (scheme `OnePercentMac`). Tabs become a sidebar; ⌘N new habit, ⌘, settings, ⌘1–5 sections. No Apple Health and no notifications on the Mac — both would duplicate the phone's.
+
+What differs by platform goes through `OnePercent/UI/Platform.swift`; feature code shouldn't need `#if os(...)` beyond that.
+
+```bash
+xcodebuild -project OnePercent.xcodeproj -scheme OnePercentMac -destination 'platform=macOS' \
+  -derivedDataPath ../.build-mac -allowProvisioningUpdates build
+cp -R "../.build-mac/Build/Products/Debug/One Percent.app" /Applications/
+```
+
+## iCloud sync
+
+`App/CloudSync.swift`. Both apps mirror the store to the private database of container `iCloud.com.arshdeep.onepercent`. Debug builds use CloudKit's **development** environment; before a TestFlight/App Store build, deploy the schema to production in the CloudKit console.
+
+CloudKit can't hold unique constraints, so `Dedupe` restores the app's own rules (one Profile, one log per habit per day, one check-in per week, one body row per date and source) at launch and after each batch of remote changes.
+
+Gotchas:
+
+- A newly added app ID can get `Permission Failure — Invalid bundle ID for container` for several minutes after Xcode registers it. It clears on its own; the store retries.
+- **Erase all data erases it everywhere.** That's what one shared copy means.
+- A new device shows the import screen until iCloud delivers. Don't import there — the data is on its way, and importing would double it.
+- To read sync logs: `/usr/bin/log show --last 5m --info --debug --predicate 'process == "One Percent"'` on the Mac (plain `log` is a zsh builtin), or on the phone `xcrun devicectl device process launch --console --environment-variables '{"OS_ACTIVITY_DT_MODE":"YES"}' …`.
 
 ## Bringing data across
 

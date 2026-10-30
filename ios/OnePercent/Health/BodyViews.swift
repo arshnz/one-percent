@@ -75,7 +75,7 @@ struct BodyView: View {
             }
             .background(Theme.bg)
             .refreshable { await sync() }
-            .toolbar(.hidden, for: .navigationBar)
+            .hidePhoneNavBar()
         }
         .task(id: "\(rows.count)-\(LocalDate.today(tz: tz))") {
             let key = "\(rows.count)-\(activities.count)-\(LocalDate.today(tz: tz))"
@@ -89,19 +89,29 @@ struct BodyView: View {
         }
     }
 
+    private static var healthLine: String {
+        #if os(iOS)
+        HealthSync.lastSync.map { "Apple Health synced \($0.formatted(.relative(presentation: .named)))" } ?? "Apple Health not connected yet"
+        #else
+        HealthSync.lastSync.map { "From your iPhone’s Apple Health, read \($0.formatted(.relative(presentation: .named)))" } ?? "Apple Health data arrives from your iPhone"
+        #endif
+    }
+
     private func healthBar(_ samples: [BodySample]) -> some View {
         HStack(spacing: 10) {
             Image(systemName: "heart.fill").foregroundStyle(.pink)
             VStack(alignment: .leading, spacing: 2) {
-                Text(HealthSync.lastSync.map { "Apple Health synced \($0.formatted(.relative(presentation: .named)))" } ?? "Apple Health not connected yet")
+                Text(Self.healthLine)
                     .font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.ink)
                 if let first = samples.first?.date {
                     Text("\(samples.count) days · history from \(DateText.dayMonthYear(first))").font(.system(size: 12)).foregroundStyle(Theme.faint)
                 }
             }
             Spacer()
+            #if os(iOS)
             Button(syncing ? "Syncing…" : HealthSync.lastSync == nil ? "Connect" : "Sync") { Task { await sync() } }
                 .font(.system(size: 13, weight: .semibold)).disabled(syncing || !HealthSync.isAvailable)
+            #endif
         }
         .padding(14).card()
     }
@@ -369,7 +379,8 @@ struct HealthSettingsCard: View {
             if let last = HealthSync.lastSync {
                 LabeledContent("Last synced", value: last.formatted(.relative(presentation: .named)))
             }
-            Button(syncing ? "Syncing…" : HealthSync.lastSync == nil ? "Connect Apple Health" : "Sync now", systemImage: "heart") {
+#if os(iOS)
+                        Button(syncing ? "Syncing…" : HealthSync.lastSync == nil ? "Connect Apple Health" : "Sync now", systemImage: "heart") {
                 syncing = true
                 Task {
                     do {
@@ -381,10 +392,15 @@ struct HealthSettingsCard: View {
                 }
             }
             .disabled(syncing || !HealthSync.isAvailable)
+            #endif
         } header: {
             Text("Apple Health")
         } footer: {
+            #if os(iOS)
             Text("Sleep, resting heart rate, HRV, steps and workouts — from an Apple Watch, Garmin Connect or any app that writes to Health. Your imported Garmin history stays; Body Battery and stress have no Health equivalent.")
+            #else
+            Text("A Mac has no Apple Health. Your iPhone reads it and the numbers arrive here through iCloud.")
+            #endif
         }
     }
 }

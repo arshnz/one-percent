@@ -18,6 +18,15 @@ struct ImportView: View {
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
             Spacer()
+            // A second device lands here before iCloud has delivered anything.
+            // The data will arrive on its own — importing again would double it.
+            HStack(spacing: 10) {
+                ProgressView().controlSize(.small)
+                Text("Checking iCloud for your data… if you already use One Percent on another device, it will appear here on its own. Leave this open for a minute.")
+                    .font(.system(size: 13)).foregroundStyle(.secondary)
+            }
+            .padding(14)
+            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
             if let error {
                 Text(error).foregroundStyle(.red).multilineTextAlignment(.center)
             }
@@ -38,6 +47,7 @@ struct ImportView: View {
             .controlSize(.large)
         }
         .padding(24)
+        .frame(maxWidth: 520)
         .fileImporter(isPresented: $picking, allowedContentTypes: [.json]) { result in
             do {
                 let url = try result.get()

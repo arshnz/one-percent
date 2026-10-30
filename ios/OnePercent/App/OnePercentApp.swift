@@ -4,29 +4,33 @@ import SwiftData
 @main
 struct OnePercentApp: App {
     let container: ModelContainer
+    /// App-wide so the Mac's menu bar can drive it as well as the views.
+    @State private var router = AppRouter()
 
     init() {
-        // CloudKit sync switches on once the app is signed with a team and has
-        // an iCloud container; the models are already CloudKit-shaped, so that
-        // is a configuration change, not a migration.
-        let config = ModelConfiguration(schema: Schema(AppSchema.models), cloudKitDatabase: .none)
-        do {
-            container = try ModelContainer(for: Schema(AppSchema.models), configurations: config)
-        } catch {
-            fatalError("Couldn't open the store: \(error)")
-        }
+        // Synced through iCloud — see CloudSync.
+        container = CloudSync.makeContainer()
         DevImport.runIfRequested(into: container.mainContext)
         ModelContextHolder.main = container.mainContext
         AIFeatures.register()
         BodyFeatures.register()
         BookIndex.warm(container)
+        CloudSync.watch(container)
     }
 
     var body: some Scene {
         WindowGroup {
             RootView()
+                .environment(router)
+                #if os(macOS)
+                .frame(minWidth: 820, minHeight: 600)
+                #endif
         }
         .modelContainer(container)
+        #if os(macOS)
+        .defaultSize(width: 1180, height: 820)
+        .commands { MacCommands(router: router) }
+        #endif
     }
 }
 

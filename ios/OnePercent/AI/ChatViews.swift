@@ -172,7 +172,7 @@ struct HandOffSheet: View {
                         .font(.system(size: 14)).foregroundStyle(Theme.ink2)
                     HStack(spacing: 10) {
                         Button {
-                            UIPasteboard.general.string = handOff.prompt
+                            Clipboard.string = handOff.prompt
                             copied = true
                         } label: { Label(copied ? "Copied" : "Copy prompt", systemImage: copied ? "checkmark" : "doc.on.doc") }
                         .buttonStyle(PrimaryButtonStyle())
@@ -193,7 +193,7 @@ struct HandOffSheet: View {
                             .padding(10).background(Theme.card, in: RoundedRectangle(cornerRadius: 10))
                             .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.line))
                         HStack {
-                            Button("Paste from clipboard") { pasted = UIPasteboard.general.string ?? pasted }.font(.system(size: 13))
+                            Button("Paste from clipboard") { pasted = Clipboard.string ?? pasted }.font(.system(size: 13))
                             Spacer()
                             Button("Use this answer") {
                                 onPaste(pasted.trimmed)
@@ -207,7 +207,7 @@ struct HandOffSheet: View {
                 .padding(18)
             }
             .navigationTitle(handOff.title)
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
             .sheet(isPresented: $share) { ShareSheet(items: [handOff.prompt]) }
         }

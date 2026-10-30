@@ -43,7 +43,7 @@ enum AIEngine {
     /// once the entitlement is granted and added to the target.
     static let cloudEnabled = Bundle.main.object(forInfoDictionaryKey: "OPUsePrivateCloudCompute") as? Bool ?? false
 
-    @available(iOS 27.0, *)
+    @available(iOS 27.0, macOS 27.0, *)
     private static var cloudModel: PrivateCloudComputeLanguageModel? {
         guard cloudEnabled else { return nil }
         let m = PrivateCloudComputeLanguageModel()
@@ -56,12 +56,12 @@ enum AIEngine {
         // failing on the first message.
         return .unavailable("Apple Intelligence doesn’t run in the Simulator — try it on your iPhone, or hand prompts off to another AI.")
         #else
-        if #available(iOS 27.0, *), cloudModel != nil { return .cloud }
+        if #available(iOS 27.0, macOS 27.0, *), cloudModel != nil { return .cloud }
         switch SystemLanguageModel.default.availability {
         case .available: return .device
-        case .unavailable(.deviceNotEligible): return .unavailable("This iPhone doesn’t support Apple Intelligence. You can still hand prompts off to another AI.")
+        case .unavailable(.deviceNotEligible): return .unavailable("This device doesn’t support Apple Intelligence. You can still hand prompts off to another AI.")
         case .unavailable(.appleIntelligenceNotEnabled): return .unavailable("Turn on Apple Intelligence in Settings to use the coach here — or hand prompts off to another AI.")
-        case .unavailable(.modelNotReady): return .unavailable("Apple Intelligence is still getting ready on this iPhone. Try again shortly.")
+        case .unavailable(.modelNotReady): return .unavailable("Apple Intelligence is still getting ready on this device. Try again shortly.")
         case .unavailable: return .unavailable("Apple Intelligence isn’t available right now.")
         }
         #endif
@@ -78,7 +78,7 @@ enum AIEngine {
     }
 
     static func session(instructions: String) -> LanguageModelSession {
-        if #available(iOS 27.0, *), let pcc = cloudModel {
+        if #available(iOS 27.0, macOS 27.0, *), let pcc = cloudModel {
             return LanguageModelSession(model: pcc, instructions: instructions)
         }
         return LanguageModelSession(instructions: instructions)

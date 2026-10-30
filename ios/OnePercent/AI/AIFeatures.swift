@@ -161,7 +161,7 @@ struct CoachChatView: View {
             .background(Theme.bg)
             .safeAreaInset(edge: .bottom) { composer }
             .navigationTitle(conversation.title)
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
                 ToolbarItem(placement: .primaryAction) {

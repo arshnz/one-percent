@@ -50,7 +50,7 @@ struct CompassView: View {
             }
             .background(Theme.bg)
             .scrollDismissesKeyboard(.interactively)
-            .toolbar(.hidden, for: .navigationBar)
+            .hidePhoneNavBar()
         }
         .onAppear {
             guard !loaded, let p = profile else { return }
@@ -456,7 +456,7 @@ struct SnapshotViewer: View {
                 }
             }
             .navigationTitle(snapshot.label ?? "Snapshot")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }

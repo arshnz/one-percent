@@ -24,7 +24,7 @@ struct LearningView: View {
                 .padding(.bottom, 32)
             }
             .background(Theme.bg)
-            .toolbar(.hidden, for: .navigationBar)
+            .hidePhoneNavBar()
         }
     }
 }

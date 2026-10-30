@@ -289,7 +289,7 @@ struct AutomaticityCheckSheet: View {
                 .padding(20)
             }
             .navigationTitle("Automaticity Check")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close", action: onClose) } }
         }
         .sensoryFeedback(.selection, trigger: scores)
@@ -326,7 +326,7 @@ struct NextPhaseSheet: View {
                 }
             }
             .navigationTitle("Phase \(nextPhaseNumber)")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Later", action: onClose) }
                 ToolbarItem(placement: .confirmationAction) {

@@ -67,7 +67,7 @@ struct ArchitectView: View {
             .background(Theme.bg)
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle(editing == nil ? (breaking ? "Engineer your escape" : "Engineer a habit") : "Edit habit")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -185,8 +185,8 @@ struct ArchitectView: View {
                     Button("Remove", role: .destructive) { d.whyImageData = nil }.font(.system(size: 13))
                 }
             }
-            if let data = d.whyImageData, let img = UIImage(data: data) {
-                Image(uiImage: img).resizable().scaledToFill().frame(height: 128).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 12))
+            if let data = d.whyImageData, let img = PlatformImage.image(data) {
+                img.resizable().scaledToFill().frame(height: 128).frame(maxWidth: .infinity).clipShape(RoundedRectangle(cornerRadius: 12))
             }
             Divider()
             Toggle(isOn: $d.systemFocusConfirmed) {
@@ -561,11 +561,7 @@ struct ArchitectView: View {
 
     /// Why images are stored on-device; keep them modest.
     static func downscale(_ data: Data, maxSide: CGFloat = 1200) -> Data {
-        guard let img = UIImage(data: data) else { return data }
-        let scale = min(1, maxSide / max(img.size.width, img.size.height))
-        let size = CGSize(width: img.size.width * scale, height: img.size.height * scale)
-        let out = UIGraphicsImageRenderer(size: size).image { _ in img.draw(in: CGRect(origin: .zero, size: size)) }
-        return out.jpegData(compressionQuality: 0.8) ?? data
+        PlatformImage.downscale(data, maxSide: maxSide)
     }
 }
 

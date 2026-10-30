@@ -1,6 +1,7 @@
 import Foundation
-import HealthKit
 import SwiftData
+#if os(iOS)
+import HealthKit
 
 // Apple Health in place of the Garmin collector. Reads what Health holds —
 // written by an Apple Watch, by Garmin Connect, or any other app — and folds it
@@ -198,3 +199,23 @@ enum HealthSync {
         }
     }
 }
+#else
+/// The Mac has no Apple Health. Body data arrives from the iPhone through
+/// iCloud, so "last synced" is when the phone last read Health.
+@MainActor
+enum HealthSync {
+    static let isAvailable = false
+
+    static var lastSync: Date? {
+        guard let ctx = ModelContextHolder.main else { return nil }
+        var d = FetchDescriptor<BodyDay>(predicate: #Predicate { $0.source == "health" }, sortBy: [SortDescriptor(\.fetchedAt, order: .reverse)])
+        d.fetchLimit = 1
+        return (try? ctx.fetch(d))?.first?.fetchedAt
+    }
+
+    struct Unavailable: Error {}
+    static func requestAccess() async throws { throw Unavailable() }
+    @discardableResult
+    static func sync(_ ctx: ModelContext, tz: String, now: Date = Date()) async throws -> Int { throw Unavailable() }
+}
+#endif
